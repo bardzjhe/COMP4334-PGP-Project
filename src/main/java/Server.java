@@ -31,7 +31,7 @@ public class Server {
 
     public static void main(String[] args){
 
-
+        // thread pool
         ExecutorService pool = Executors.newFixedThreadPool(30);
         try(ServerSocket server = new ServerSocket(PORT)){
             while(true){
@@ -64,6 +64,8 @@ public class Server {
                 ObjectOutputStream outputStream = new ObjectOutputStream(connection.getOutputStream());
                 // Input stream for receiving data from the client.
                 ObjectInputStream inputStream = new ObjectInputStream(connection.getInputStream());
+
+
 
             }catch (IOException e){
                 System.err.println(e);
