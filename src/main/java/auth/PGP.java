@@ -39,7 +39,21 @@ public class PGP {
         this.othersPublicKey = othersPublicKey;
     }
 
+    private boolean checkAllKeysExist(){
+        if (myPublicKey != null
+                && myPrivateKey != null
+                && othersPublicKey != null){
+            return true;
+        }
+        return false;
+    }
+
     public Message encrypt(String fileName){
+
+        if(!checkAllKeysExist()){
+            System.err.println("Keys not properly set.");
+            return null;
+        }
 
         try {
             // Session key based on CAST-128
@@ -52,6 +66,8 @@ public class PGP {
             Signature signature = Signature.getInstance("SHA1withRSA");
             // initialize the signature with our private key.
             signature.initSign(myPrivateKey);
+            // TODO: Define what message to read.
+            // TODO: If we should use hash function here.
             // the file to send should be converted to byte format.
             byte[] messageBytes = Files.readAllBytes(Paths.get("message.txt"));
             signature.update(messageBytes);
@@ -60,9 +76,16 @@ public class PGP {
             // Encrypt the byte message using session key.
             Cipher cast128Cipher = Cipher.getInstance("CAST5", "BC");
             cast128Cipher.init(Cipher.ENCRYPT_MODE, sessionKey);
-            // TODO: Not sure if we need IV here.
+            // TODO: not sure what the role of IV is here.
+            byte[] iv = cast128Cipher.getIV();
             byte[] ciphertext = cast128Cipher.doFinal(messageBytes);
 
+            // Encrypt session key with the public key of receiver.
+            Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+            rsaCipher.init(Cipher.ENCRYPT_MODE, othersPublicKey);
+            byte[] encryptedCast128Key = rsaCipher.doFinal(sessionKey.getEncoded());
+
+            return new Message(fileName, encryptedCast128Key, digitalSignature, ciphertext);
 
         }catch (NoSuchPaddingException e) {
             throw new RuntimeException(e);
@@ -82,7 +105,7 @@ public class PGP {
             throw new RuntimeException(e);
         }
 
-        return null;
+        
 
     }
 }

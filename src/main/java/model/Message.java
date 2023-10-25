@@ -9,34 +9,31 @@ import java.util.Date;
  * @Date 16/10/2023
  * @Description: Please refer to the page 8 in http://www.facweb.iitkgp.ac.in/~sourav/PGP.pdf
  * and you can know the PGP message structure.
+ *
+ *
  */
 public class Message {
 
     /* Session key component */
-    // TODO: the message is encrypted using CAST-128 according to the lecture slides.
-    private byte[] sessionKey;
-    // TODO: Not sure if it's needed.
-    private long publicKeyIdOfRecipient;
-
+    // the session key is encrypted using CAST-128
+    private byte[] encryptedSessionKey;
 
     /* Signature */
-    private Date SignatureTimestamp;
-    private long publicKeyIdOfSender;
-    // Any message longer than octetLength must be broken up into
-    // smaller segments, each of which is mailed separately.
-    private final int octetLength = 50000;
-    // Message digest: the hash function used in SHA-1 which creates 160 bit message digest.
-    private byte[] messageDigest;
-
+    byte[] digitalSignature;
 
     /* Message */
     private Date fileTimestamp;
     private String filename;
-    private String Data;
-    private byte[] encryptedMsg; // Encrypted data + encrypted session key
+    private byte[] ciphertext;
 
 
-    public Message(){
+    public Message(String filename, byte[] encryptedSessionKey,
+                   byte[] digitalSignature, byte[] ciphertext){
+        this.fileTimestamp = new Date();
+        this.encryptedSessionKey = encryptedSessionKey;
+        this.digitalSignature = digitalSignature;
+        this.ciphertext = ciphertext;
 
     }
+
 }
