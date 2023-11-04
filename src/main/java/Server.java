@@ -1,4 +1,4 @@
-import model.Message;
+import model.EncryptedMessage;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -23,7 +23,7 @@ import java.util.concurrent.Executors;
 public class Server {
 
     final static int PORT = 7000;
-    private ConcurrentHashMap<String, List<Message>> messageMap;
+    private ConcurrentHashMap<String, List<EncryptedMessage>> messageMap;
 
     public Server(){
         messageMap = new ConcurrentHashMap<>();

@@ -1,6 +1,6 @@
 package auth;
 
-import model.Message;
+import model.EncryptedMessage;
 
 import javax.crypto.*;
 import java.io.IOException;
@@ -48,7 +48,7 @@ public class PGP {
         return false;
     }
 
-    public Message encrypt(String fileName){
+    public EncryptedMessage encrypt(String fileName){
 
         if(!checkAllKeysExist()){
             System.err.println("Keys not properly set.");
@@ -62,12 +62,11 @@ public class PGP {
             SecretKey sessionKey = keyGen.generateKey();
 
             // Digital Signature based on the combination of SHA-1 and RSA
-            // refer to https://www.baeldung.com/java-digital-signature
+            // The hash code of a message is created using SHA-1.
             Signature signature = Signature.getInstance("SHA1withRSA");
-            // initialize the signature with our private key.
+            // The message digest is then encrypted using RSA with sender's private key.
             signature.initSign(myPrivateKey);
-            // TODO: Define what message to read.
-            // TODO: If we should use hash function here.
+
             // the file to send should be converted to byte format.
             byte[] messageBytes = Files.readAllBytes(Paths.get("message.txt"));
             signature.update(messageBytes);
@@ -76,7 +75,9 @@ public class PGP {
             // Encrypt the byte message using session key.
             Cipher cast128Cipher = Cipher.getInstance("CAST5", "BC");
             cast128Cipher.init(Cipher.ENCRYPT_MODE, sessionKey);
-            // TODO: not sure what the role of IV is here.
+
+            // TODO: please note iv should be transmitted together. it's not a secret so we dont have to encrypt it.
+            // https://stackoverflow.com/questions/38059749/handling-transfer-of-iv-initialization-vectors
             byte[] iv = cast128Cipher.getIV();
             byte[] ciphertext = cast128Cipher.doFinal(messageBytes);
 
@@ -85,7 +86,7 @@ public class PGP {
             rsaCipher.init(Cipher.ENCRYPT_MODE, othersPublicKey);
             byte[] encryptedCast128Key = rsaCipher.doFinal(sessionKey.getEncoded());
 
-            return new Message(fileName, encryptedCast128Key, digitalSignature, ciphertext);
+            return new EncryptedMessage(fileName, encryptedCast128Key, iv, digitalSignature, ciphertext);
 
         }catch (NoSuchPaddingException e) {
             throw new RuntimeException(e);
