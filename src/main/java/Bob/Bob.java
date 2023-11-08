@@ -1,3 +1,5 @@
+package Bob;
+
 import java.security.*;
 
 /**
@@ -5,12 +7,11 @@ import java.security.*;
  * @Date 7/11/2023
  * @Description:
  */
-public class Alice {
-
+public class Bob {
     PublicKey publicKey;
     PrivateKey privateKey;
 
-    public Alice() {
+    public Bob() {
         try{
             KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
             generator.initialize(2048);
@@ -20,9 +21,5 @@ public class Alice {
         }catch (NoSuchAlgorithmException ex) {
 
         }
-    }
-
-    public static void main(String[] args) {
-
     }
 }
