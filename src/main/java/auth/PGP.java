@@ -4,9 +4,12 @@ import model.EncryptedMessage;
 
 import javax.crypto.*;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * @Author Anthony HE, anthony.zj.he@outlook.com
@@ -15,40 +18,41 @@ import java.security.*;
  */
 public class PGP {
 
+    private static final Logger LOGGER = Logger.getLogger( PGP.class.getName() );
     private int keySize;
     // my keys
-    private PublicKey myPublicKey;
-    private PrivateKey myPrivateKey;
+    private PublicKey senderPublicKey;
+    private PrivateKey senderPrivateKey;
     // others' keys
-    private PublicKey othersPublicKey;
+    private PublicKey recipientPublicKey;
 
 
     public PGP(int keySize) {
         this.keySize = keySize;
     }
 
-    public void setMyPrivateKey(PrivateKey myPrivateKey) {
-        this.myPrivateKey = myPrivateKey;
+    public void setSenderPrivateKey(PrivateKey senderPrivateKey) {
+        this.senderPrivateKey = senderPrivateKey;
     }
 
-    public void setMyPublicKey(PublicKey myPublicKey) {
-        this.myPublicKey = myPublicKey;
+    public void setSenderPublicKey(PublicKey senderPublicKey) {
+        this.senderPublicKey = senderPublicKey;
     }
 
-    public void setOthersPublicKey(PublicKey othersPublicKey) {
-        this.othersPublicKey = othersPublicKey;
+    public void setRecipientPublicKey(PublicKey recipientPublicKey) {
+        this.recipientPublicKey = recipientPublicKey;
     }
 
     private boolean checkAllKeysExist(){
-        if (myPublicKey != null
-                && myPrivateKey != null
-                && othersPublicKey != null){
+        if (senderPublicKey != null
+                && senderPrivateKey != null
+                && recipientPublicKey != null){
             return true;
         }
         return false;
     }
 
-    public EncryptedMessage encrypt(String fileName){
+    public EncryptedMessage encrypt(String msgName, String msg){
 
         if(!checkAllKeysExist()){
             System.err.println("Keys not properly set.");
@@ -56,6 +60,7 @@ public class PGP {
         }
 
         try {
+
             // Session key based on CAST-128
             KeyGenerator keyGen = KeyGenerator.getInstance("CAST5", "BC");
             keyGen.init(128); // Initialize the key generator to create a key of size 128 bits.
@@ -65,10 +70,10 @@ public class PGP {
             // The hash code of a message is created using SHA-1.
             Signature signature = Signature.getInstance("SHA1withRSA");
             // The message digest is then encrypted using RSA with sender's private key.
-            signature.initSign(myPrivateKey);
+            signature.initSign(senderPrivateKey);
 
             // the file to send should be converted to byte format.
-            byte[] messageBytes = Files.readAllBytes(Paths.get("message.txt"));
+            byte[] messageBytes = msg.getBytes(StandardCharsets.UTF_8);
             signature.update(messageBytes);
             byte[] digitalSignature = signature.sign();
 
@@ -83,30 +88,20 @@ public class PGP {
 
             // Encrypt session key with the public key of receiver.
             Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-            rsaCipher.init(Cipher.ENCRYPT_MODE, othersPublicKey);
+            rsaCipher.init(Cipher.ENCRYPT_MODE, recipientPublicKey);
             byte[] encryptedCast128Key = rsaCipher.doFinal(sessionKey.getEncoded());
 
-            return new EncryptedMessage(fileName, encryptedCast128Key, iv, digitalSignature, ciphertext);
+            return new EncryptedMessage(msgName, encryptedCast128Key, iv, digitalSignature, ciphertext);
 
-        }catch (NoSuchPaddingException e) {
-            throw new RuntimeException(e);
-        } catch (IllegalBlockSizeException e) {
-            throw new RuntimeException(e);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        } catch (BadPaddingException e) {
-            throw new RuntimeException(e);
-        } catch (NoSuchProviderException e) {
-            throw new RuntimeException(e);
-        } catch (InvalidKeyException e) {
-            throw new RuntimeException(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        } catch (SignatureException e) {
-            throw new RuntimeException(e);
+        }catch (NoSuchPaddingException | IllegalBlockSizeException |
+        NoSuchAlgorithmException | BadPaddingException | NoSuchProviderException |
+        InvalidKeyException | SignatureException ex) {
+            LOGGER.log( Level.SEVERE, ex.toString(), ex );
+            return null;
         }
 
-        
-
     }
+
+
+    public String decrypt()
 }

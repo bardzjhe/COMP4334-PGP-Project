@@ -1,5 +1,7 @@
 package Alice;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.security.*;
 
 /**
@@ -15,17 +17,37 @@ public class Alice {
     PrivateKey privateKey;
 
     public Alice() {
+        File privateKeyFile = new File("./src/main/java/Alice/AlicePrivate.key");
+        File publicKeyFile = new File("./src/main/java/publickeys/AlicePublic.key");
+        if(!privateKeyFile.exists() || !publicKeyFile.exists()){
+            try{
+                generateKeyPair();
+            }catch (Exception ex){}
+        }
 
+        
     }
 
-    public static KeyPair generateKeyPair() throws Exception {
+    public void generateKeyPair() throws Exception {
         KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
         generator.initialize(2048, new SecureRandom());
         KeyPair pair = generator.generateKeyPair();
-        return pair;
+
+        try(FileOutputStream fos = new FileOutputStream("./src/main/java/publickeys/AlicePublic.key")){
+            fos.write(pair.getPublic().getEncoded());
+        }
+
+        try(FileOutputStream fos = new FileOutputStream("./src/main/java/Alice/AlicePrivate.key")){
+            fos.write(pair.getPrivate().getEncoded());
+        }
     }
 
-    public static void main(String[] args) {
+    public void sendMessage(String recipient, String message){
+        
+    }
+
+    public static void main(String[] args) throws Exception {
+
 
     }
 }
