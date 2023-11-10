@@ -21,7 +21,7 @@ public class EncryptedMessage implements Serializable {
     private byte[] iv;
 
     /* Signature */
-    byte[] digitalSignature;
+    private byte[] digitalSignature;
 
     /* Message */
     private Date fileTimestamp;
@@ -38,6 +38,27 @@ public class EncryptedMessage implements Serializable {
         this.ciphertext = ciphertext;
     }
 
+    public byte[] getEncryptedSessionKey() {
+        return encryptedSessionKey;
+    }
 
+    public byte[] getIv() {
+        return iv;
+    }
 
+    public byte[] getDigitalSignature() {
+        return digitalSignature;
+    }
+
+    public Date getFileTimestamp() {
+        return fileTimestamp;
+    }
+
+    public String getFilename() {
+        return filename;
+    }
+
+    public byte[] getCiphertext() {
+        return ciphertext;
+    }
 }
