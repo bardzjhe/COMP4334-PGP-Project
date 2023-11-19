@@ -5,12 +5,10 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.*;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
-<<<<<<< Updated upstream
 * @Author Anthony HE, anthony.zj.he@outlook.com
 * @Date 15/10/2023
 * @Description: Multithreaded server
@@ -103,25 +101,4 @@ public class Server {
     }
 }
 
-//import java.io.*;
-//        import java.net.*;
-//
-//public class Client {
-//    public static void main(String[] args) throws IOException {
-//        Socket socket = new Socket("localhost", 7000);
-//        BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-//        PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
-//
-//        output.println("ClientName"); // replace with your client's name
-//
-//        // To send a message
-//        output.println("ReceiverName"); // replace with the receiver's name
-//        output.println("Hello, this is a message."); // replace with your message
-//
-//        // To receive messages
-//        String receivedMessage;
-//        while ((receivedMessage = input.readLine()) != null) {
-//            System.out.println(receivedMessage);
-//        }
-//    }
-//}
+
