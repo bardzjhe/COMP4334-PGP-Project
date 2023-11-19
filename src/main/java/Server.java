@@ -67,17 +67,19 @@ public class Server {
 
         @Override
         public Void call() throws Exception {
+            PrintWriter out = null;
             try {
 
                 BufferedReader in = new BufferedReader(
                         new InputStreamReader(connection.getInputStream()));
-                PrintWriter out = new PrintWriter(connection.getOutputStream(), true);
+                out = new PrintWriter(connection.getOutputStream(), true);
                 String name = in.readLine();
                 clients.put(name, out);
                 out.println("Welcome " + name);
 
-                String receiverName;
-                while ((receiverName = in.readLine()) != null) {
+
+                while ((name = in.readLine()) != null) {
+                    String receiverName = in.readLine();
                     String message = in.readLine();
                     message = "From " + name + " at " + new Date() + ": " + message;
                     if (clients.containsKey(receiverName)) {
@@ -94,7 +96,9 @@ public class Server {
                 } catch (IOException e) {
                     // ignore
                 }
-
+                if (out != null) {
+                    clients.values().remove(out);
+                }
             }
             return null;
         }

@@ -1,3 +1,7 @@
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.*;
 /**
@@ -6,23 +10,73 @@ import java.net.*;
  * @Description:
  */
 
-
 public class ClientB {
-    public static void main(String[] args) throws IOException {
-        Socket socket = new Socket("localhost", 7000);
-        BufferedReader input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
+    private JTextArea textArea;
+    private JTextField textField;
+    private JTextField receiverNameField;
+    private BufferedReader input;
+    private PrintWriter output;
+    private String clientName = "Client B"; // replace with your client's name
 
-        output.println("Client B"); // replace with your client's name
+    public ClientB() {
+        JFrame frame = new JFrame("Chat Application");
+        textArea = new JTextArea(20, 50);
+        textArea.setEditable(false);
+        textField = new JTextField(50);
+        receiverNameField = new JTextField(50);
 
-//        // To send a message
-//        output.println("Client B"); // replace with the receiver's name
-//        output.println("Hello, this is a message."); // replace with your message
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        panel.add(new JLabel("Receiver Name:"));
+        panel.add(receiverNameField);
+        panel.add(new JLabel("Message:"));
+        panel.add(textField);
 
-        // To receive messages
-        String receivedMessage;
-        while ((receivedMessage = input.readLine()) != null) {
-            System.out.println(receivedMessage);
+        JButton sendButton = new JButton("Send");
+        sendButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                output.println(clientName);
+                output.println(receiverNameField.getText());
+                output.println(textField.getText());
+                textField.setText("");
+            }
+        });
+        panel.add(sendButton);
+
+        frame.getContentPane().add(new JScrollPane(textArea), BorderLayout.CENTER);
+        frame.getContentPane().add(panel, BorderLayout.SOUTH);
+        frame.pack();
+
+        try {
+            Socket socket = new Socket("localhost", 7000);
+            input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            output = new PrintWriter(socket.getOutputStream(), true);
+            output.println(clientName);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (true) {
+                    try {
+                        String receivedMessage;
+                        while ((receivedMessage = input.readLine()) != null) {
+                            textArea.append(receivedMessage + "\n");
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }).start();
+
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setVisible(true);
+    }
+
+    public static void main(String[] args) {
+        new ClientB();
     }
 }
