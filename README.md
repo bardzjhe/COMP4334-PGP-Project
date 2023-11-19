@@ -10,3 +10,7 @@ TODO:
 3. File processing, can refer to [link](https://github.com/xzx4959/PGP/blob/master/src/main/java/com/alibaba/pgp/TestPGP/KeyBasedLargeFileProcessor.java)
 
 Server should be capable of message transfer, caching, and trust model. 
+
+
+Initial implementation of the UI:
+![img.png](img.png)
