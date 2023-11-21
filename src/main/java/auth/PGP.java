@@ -3,13 +3,13 @@ package auth;
 import model.EncryptedMessage;
 
 import javax.crypto.*;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.security.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  * @Author Anthony HE, anthony.zj.he@outlook.com
@@ -17,7 +17,6 @@ import java.util.logging.Logger;
  * @Description:
  */
 public class PGP {
-
     private static final Logger LOGGER = Logger.getLogger( PGP.class.getName() );
     private int keySize;
     // my keys
@@ -93,7 +92,7 @@ public class PGP {
 
             return new EncryptedMessage(msgName, encryptedCast128Key, iv, digitalSignature, ciphertext);
 
-        }catch (NoSuchPaddingException | IllegalBlockSizeException |
+        } catch (NoSuchPaddingException | IllegalBlockSizeException |
         NoSuchAlgorithmException | BadPaddingException | NoSuchProviderException |
         InvalidKeyException | SignatureException ex) {
             LOGGER.log( Level.SEVERE, ex.toString(), ex );
@@ -103,5 +102,44 @@ public class PGP {
     }
 
 
-    public String decrypt()
+    public String decrypt(EncryptedMessage encryptedMessage) {
+        if (!checkAllKeysExist()) {
+            System.err.println("Keys not properly set.");
+            return null;
+        }
+
+        try {
+            // Decrypt session key with the private key of the receiver
+            Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+            rsaCipher.init(Cipher.DECRYPT_MODE, senderPrivateKey);
+            byte[] decryptedSessionKey = rsaCipher.doFinal(encryptedMessage.getEncryptedSessionKey());
+
+            // Reconstruct the session key
+            SecretKey sessionKey = new SecretKeySpec(decryptedSessionKey, "CAST5");
+
+            // Decrypt the message using the session key
+            Cipher cast128Cipher = Cipher.getInstance("CAST5", "BC");
+            cast128Cipher.init(Cipher.DECRYPT_MODE, sessionKey);
+            byte[] decryptedMessageBytes = cast128Cipher.doFinal(encryptedMessage.getCiphertext());
+
+            // Verify the digital signature using the sender's public key
+            Signature signature = Signature.getInstance("SHA1withRSA");
+            signature.initVerify(senderPublicKey);
+            signature.update(decryptedMessageBytes);
+
+            if (!signature.verify(encryptedMessage.getDigitalSignature())) {
+                System.err.println("Digital signature verification failed.");
+                return null;
+            }
+
+            // Return the decrypted message
+            return new String(decryptedMessageBytes, StandardCharsets.UTF_8);
+
+        } catch (NoSuchPaddingException | IllegalBlockSizeException |
+                 NoSuchAlgorithmException | BadPaddingException | NoSuchProviderException |
+                 InvalidKeyException | SignatureException ex) {
+            LOGGER.log(Level.SEVERE, ex.toString(), ex);
+            return null;
+        }
+    }
 }
