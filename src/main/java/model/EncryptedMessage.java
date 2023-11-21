@@ -30,7 +30,7 @@ public class EncryptedMessage implements Serializable {
 
 
     public EncryptedMessage(String filename, byte[] encryptedSessionKey, byte[] iv,
-                            byte[] digitalSignature, byte[] ciphertext){
+                            byte[] digitalSignature, byte[] ciphertext) {
         this.fileTimestamp = new Date();
         this.encryptedSessionKey = encryptedSessionKey;
         this.iv = iv;
@@ -61,4 +61,5 @@ public class EncryptedMessage implements Serializable {
     public byte[] getCiphertext() {
         return ciphertext;
     }
+
 }

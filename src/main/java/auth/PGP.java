@@ -101,7 +101,6 @@ public class PGP {
 
     }
 
-
     public String decrypt(EncryptedMessage encryptedMessage) {
         if (!checkAllKeysExist()) {
             System.err.println("Keys not properly set.");
