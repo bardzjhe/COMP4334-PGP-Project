@@ -7,6 +7,7 @@ import model.EncryptedMessage;
 
 public class PGPTester {
 
+
     public static void main(String[] args) {
         // generate keypairs
         KeyPair senderKeyPair = generateKeyPair();
