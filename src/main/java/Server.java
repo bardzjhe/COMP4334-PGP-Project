@@ -1,4 +1,4 @@
-import model.EncryptedMessage;
+import common.TrustLevel;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -22,14 +22,39 @@ public class Server {
 
     final static int PORT = 7000;
 
+    // used to send messages to the clients
     private Map<String, PrintWriter> clients = new HashMap<>();
-    private Map<String, Map<String, String>> trustRelationships;
-
+    // PGP trust model implementation
+    private Map<String, Map<String, TrustLevel>> trustNetwork;
 
     public Server() {
+        trustNetwork = new HashMap<>();
+    }
 
-        trustRelationships = new HashMap<>();
+    public void addTrust(String from, String to, TrustLevel level){
+        trustNetwork.putIfAbsent(from, new HashMap<>());
+        trustNetwork.get(from).put(to, level);
+    }
 
+    public TrustLevel getTrustLevel(String from, String to) {
+        if(trustNetwork.containsKey(from)){
+            Map<String, TrustLevel> tempMap = trustNetwork.get(from);
+            if(tempMap.containsKey(to)){
+                return tempMap.get(to);
+            }
+        }
+        return TrustLevel.NONE;
+    }
+
+    public Set<String> getTrustedBy(String user, TrustLevel level) {
+        Set<String> result = new HashSet<>();
+        for (String other : trustNetwork.keySet()) {
+            TrustLevel trustLevel = trustNetwork.get(other).getOrDefault(user, TrustLevel.NONE);
+            if (trustLevel == level) {
+                result.add(other);
+            }
+        }
+        return result;
     }
 
     public void start(){
@@ -40,6 +65,7 @@ public class Server {
                 try {
                     Socket connection = server.accept();
                     Callable<Void> task = new ClientHandler(connection);
+                    // submit the task to the thread pool for execution.
                     pool.submit(task);
                 } catch (IOException ex) {
                     System.err.println(ex);
@@ -50,11 +76,6 @@ public class Server {
             // Exception handling for server-level issues
             System.err.println(ex);
         }
-    }
-    public static void main(String[] args) {
-
-        Server server = new Server();
-        server.start();
     }
 
     private class ClientHandler implements Callable<Void> {
@@ -70,14 +91,17 @@ public class Server {
             PrintWriter out = null;
             try {
 
+                // input stream and output streams for communication with clients.
                 BufferedReader in = new BufferedReader(
                         new InputStreamReader(connection.getInputStream()));
                 out = new PrintWriter(connection.getOutputStream(), true);
+
+                // once establish one connection, send a welcome message.
                 String name = in.readLine();
                 clients.put(name, out);
                 out.println("Welcome " + name);
 
-
+                // forward message
                 while ((name = in.readLine()) != null) {
                     String receiverName = in.readLine();
                     String message = in.readLine();
@@ -87,7 +111,6 @@ public class Server {
                     }
                 }
 
-
             } catch (IOException e) {
                 System.err.println(e);
             } finally {
@@ -96,12 +119,30 @@ public class Server {
                 } catch (IOException e) {
                     // ignore
                 }
+
+                // the client's PrintWriter is remove once connection is closed.
                 if (out != null) {
                     clients.values().remove(out);
                 }
             }
             return null;
         }
+    }
+
+    public static void main(String[] args) {
+
+        Server server = new Server();
+
+        // Alice fully trusts Bob
+        server.addTrust("Alice", "Bob", TrustLevel.FULL);
+        // Alice partially trusts Carmen and Jane
+        server.addTrust("Alice", "Carmen", TrustLevel.PARTIAL);
+        server.addTrust("Alice", "Jane", TrustLevel.PARTIAL);
+        // Alice doesn't trust John
+        server.addTrust("Alice", "John", TrustLevel.NONE);
+
+
+        server.start();
     }
 }
 

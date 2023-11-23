@@ -10,8 +10,6 @@ import java.net.*;
  * @Description:
  */
 
-
-
 public class ClientA {
     private JTextArea textArea;
     private JTextField textField;
