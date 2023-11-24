@@ -118,11 +118,14 @@ public class Server {
                     String message = (String) in.readObject();
 //                    EncryptedMessage encryptedMessage = (EncryptedMessage) in.readObject();
 //                    byte[] ciphertext = encryptedMessage.getCiphertext();
-                    message = "Message content " + name + ": " + message;
+
+                    String formattedContent = String.format("From: %s\nTrust Level: %s\n\nMessage Content:\n%s",
+                            name, getTrustLevel(name, receiverName), message
+                    );
+
                     System.out.println(receiverName + ": " + message);
                     if (clients.containsKey(receiverName)) {
-                        clients.get(receiverName).writeObject("From " + name + ", whose trust level: "
-                                + getTrustLevel(name, receiverName) + "\n" + message);
+                        clients.get(receiverName).writeObject(formattedContent);
 
 
                     }
