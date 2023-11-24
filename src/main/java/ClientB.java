@@ -14,12 +14,12 @@ public class ClientB {
     private JTextArea textArea;
     private JTextField textField;
     private JTextField receiverNameField;
-    private BufferedReader input;
-    private PrintWriter output;
+    private ObjectInputStream input;
+    private ObjectOutputStream output;
     private String clientName = "Client B"; // replace with your client's name
 
     public ClientB() {
-        JFrame frame = new JFrame("Chat Application");
+        JFrame frame = new JFrame("Email Application");
         textArea = new JTextArea(20, 50);
         textArea.setEditable(false);
         textField = new JTextField(50);
@@ -35,26 +35,39 @@ public class ClientB {
         JButton sendButton = new JButton("Send");
         sendButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                output.println(clientName);
-                output.println(receiverNameField.getText());
-                output.println(textField.getText());
+
+                try {
+                    output.writeObject(clientName);
+                    output.writeObject(receiverNameField.getText());
+                    output.writeObject(textField.getText());
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+
                 textField.setText("");
             }
         });
         panel.add(sendButton);
 
+
         frame.getContentPane().add(new JScrollPane(textArea), BorderLayout.CENTER);
         frame.getContentPane().add(panel, BorderLayout.SOUTH);
         frame.pack();
+        Socket socket;
 
         try {
-            Socket socket = new Socket("localhost", 7000);
-            input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            output = new PrintWriter(socket.getOutputStream(), true);
-            output.println(clientName);
+
+            socket = new Socket("localhost", 7000);
+
+            output = new ObjectOutputStream(socket.getOutputStream());
+
+            input = new ObjectInputStream(socket.getInputStream());
+
+            output.writeObject(clientName);
         } catch (IOException e) {
             e.printStackTrace();
         }
+
 
         new Thread(new Runnable() {
             @Override
@@ -62,11 +75,13 @@ public class ClientB {
                 while (true) {
                     try {
                         String receivedMessage;
-                        while ((receivedMessage = input.readLine()) != null) {
+                        while ((receivedMessage = (String) input.readObject()) != null) {
                             textArea.append(receivedMessage + "\n");
                         }
                     } catch (IOException e) {
                         e.printStackTrace();
+                    } catch (ClassNotFoundException e) {
+                        throw new RuntimeException(e);
                     }
                 }
             }
@@ -74,6 +89,7 @@ public class ClientB {
 
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
+        System.out.println("D--");
     }
 
     public static void main(String[] args) {

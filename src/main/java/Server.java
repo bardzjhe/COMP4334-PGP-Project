@@ -23,7 +23,7 @@ public class Server {
     final static int PORT = 7000;
 
     // used to send messages to the clients
-    private Map<String, PrintWriter> clients = new HashMap<>();
+    private Map<String, ObjectOutputStream> clients = new HashMap<>();
     // PGP trust model implementation
     private Map<String, Map<String, TrustLevel>> trustNetwork;
 
@@ -88,26 +88,29 @@ public class Server {
 
         @Override
         public Void call() throws Exception {
-            PrintWriter out = null;
+            ObjectOutputStream out = null;
             try {
 
                 // input stream and output streams for communication with clients.
-                BufferedReader in = new BufferedReader(
-                        new InputStreamReader(connection.getInputStream()));
-                out = new PrintWriter(connection.getOutputStream(), true);
+                ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
+                out = new ObjectOutputStream(connection.getOutputStream());
 
                 // once establish one connection, send a welcome message.
-                String name = in.readLine();
+                String name = (String) in.readObject();
+                System.out.println("Name:" + name);
                 clients.put(name, out);
-                out.println("Welcome " + name);
+                out.writeObject("Welcome " + name);
 
                 // forward message
-                while ((name = in.readLine()) != null) {
-                    String receiverName = in.readLine();
-                    String message = in.readLine();
+                while ((name = (String) in.readObject()) != null) {
+                    String receiverName = (String) in.readObject();
+                    String message = (String) in.readObject();
+//                    EncryptedMessage encryptedMessage = (EncryptedMessage) in.readObject();
+//                    byte[] ciphertext = encryptedMessage.getCiphertext();
                     message = "From " + name + " at " + new Date() + ": " + message;
+                    System.out.println(receiverName + ": " + message);
                     if (clients.containsKey(receiverName)) {
-                        clients.get(receiverName).println(message);
+                        clients.get(receiverName).writeObject(message);
                     }
                 }
 
@@ -141,7 +144,7 @@ public class Server {
         // Alice doesn't trust John
         server.addTrust("Alice", "John", TrustLevel.NONE);
 
-
+        System.out.println("Server starts running...");
         server.start();
     }
 }

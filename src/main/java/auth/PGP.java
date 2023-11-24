@@ -61,7 +61,7 @@ public class PGP {
         try {
 
             // Session key based on CAST-128
-            KeyGenerator keyGen = KeyGenerator.getInstance("CAST5", "BC");
+            KeyGenerator keyGen = KeyGenerator.getInstance("AES");
             keyGen.init(128); // Initialize the key generator to create a key of size 128 bits.
             SecretKey sessionKey = keyGen.generateKey();
 
@@ -77,7 +77,7 @@ public class PGP {
             byte[] digitalSignature = signature.sign();
 
             // Encrypt the byte message using session key.
-            Cipher cast128Cipher = Cipher.getInstance("CAST5", "BC");
+            Cipher cast128Cipher = Cipher.getInstance("AES");
             cast128Cipher.init(Cipher.ENCRYPT_MODE, sessionKey);
 
             // TODO: please note iv should be transmitted together. it's not a secret so we dont have to encrypt it.
@@ -93,7 +93,7 @@ public class PGP {
             return new EncryptedMessage(msgName, encryptedCast128Key, iv, digitalSignature, ciphertext);
 
         } catch (NoSuchPaddingException | IllegalBlockSizeException |
-        NoSuchAlgorithmException | BadPaddingException | NoSuchProviderException |
+        NoSuchAlgorithmException | BadPaddingException |
         InvalidKeyException | SignatureException ex) {
             LOGGER.log( Level.SEVERE, ex.toString(), ex );
             return null;
@@ -114,10 +114,10 @@ public class PGP {
             byte[] decryptedSessionKey = rsaCipher.doFinal(encryptedMessage.getEncryptedSessionKey());
 
             // Reconstruct the session key
-            SecretKey sessionKey = new SecretKeySpec(decryptedSessionKey, "CAST5");
+            SecretKey sessionKey = new SecretKeySpec(decryptedSessionKey, "AES");
 
             // Decrypt the message using the session key
-            Cipher cast128Cipher = Cipher.getInstance("CAST5", "BC");
+            Cipher cast128Cipher = Cipher.getInstance("AES");
             cast128Cipher.init(Cipher.DECRYPT_MODE, sessionKey);
             byte[] decryptedMessageBytes = cast128Cipher.doFinal(encryptedMessage.getCiphertext());
 
@@ -135,7 +135,7 @@ public class PGP {
             return new String(decryptedMessageBytes, StandardCharsets.UTF_8);
 
         } catch (NoSuchPaddingException | IllegalBlockSizeException |
-                 NoSuchAlgorithmException | BadPaddingException | NoSuchProviderException |
+                 NoSuchAlgorithmException | BadPaddingException |
                  InvalidKeyException | SignatureException ex) {
             LOGGER.log(Level.SEVERE, ex.toString(), ex);
             return null;
