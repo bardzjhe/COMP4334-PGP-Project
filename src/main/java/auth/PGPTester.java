@@ -13,17 +13,22 @@ public class PGPTester {
         KeyPair recipientKeyPair = generateKeyPair();
 
         // init PGP
-        PGP pgp = new PGP(128);
-        pgp.setSenderPrivateKey(senderKeyPair.getPrivate());
-        pgp.setSenderPublicKey(senderKeyPair.getPublic());
-        pgp.setRecipientPublicKey(recipientKeyPair.getPublic());
+        PGP senderPGP = new PGP(128);
+        senderPGP.setMyPrivateKey(senderKeyPair.getPrivate());
+        senderPGP.setMyPublicKey(senderKeyPair.getPublic());
+        senderPGP.setTheOtherPublicKey(recipientKeyPair.getPublic());
+
+        PGP receiverPGP = new PGP(128);
+        receiverPGP.setMyPrivateKey(recipientKeyPair.getPrivate());
+        receiverPGP.setMyPublicKey(recipientKeyPair.getPublic());
+        receiverPGP.setTheOtherPublicKey(senderKeyPair.getPublic());
 
         String msgName = "Test Message";
-        String originalMessage = "Hello.";
+        String originalMessage = "Hello. This is testing message";
 
         // encryption
         System.out.println("Original Message: " + originalMessage);
-        EncryptedMessage encryptedMessage = pgp.encrypt(msgName, originalMessage);
+        EncryptedMessage encryptedMessage = senderPGP.encrypt(msgName, originalMessage);
         if (encryptedMessage != null) {
             System.out.println("Encryption successful.");
 
@@ -34,7 +39,7 @@ public class PGPTester {
             System.out.println("Ciphertext: " + bytesToHex(encryptedMessage.getCiphertext()));
 
             // decryption
-            String decryptedMessage = pgp.decrypt(encryptedMessage);
+            String decryptedMessage = receiverPGP.decrypt(encryptedMessage);
             if (decryptedMessage != null) {
                 System.out.println("Decryption successful.");
                 System.out.println("Decrypted Message: " + decryptedMessage);

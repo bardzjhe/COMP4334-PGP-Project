@@ -23,32 +23,32 @@ public class PGP {
     private static final Logger LOGGER = Logger.getLogger( PGP.class.getName() );
     private int keySize;
     // my keys
-    private PublicKey senderPublicKey;
-    private PrivateKey senderPrivateKey;
+    private PublicKey myPublicKey;
+    private PrivateKey myPrivateKey;
     // others' keys
-    private PublicKey recipientPublicKey;
+    private PublicKey theOtherPublicKey;
 
 
     public PGP(int keySize) {
         this.keySize = keySize;
     }
 
-    public void setSenderPrivateKey(PrivateKey senderPrivateKey) {
-        this.senderPrivateKey = senderPrivateKey;
+    public void setMyPrivateKey(PrivateKey myPrivateKey) {
+        this.myPrivateKey = myPrivateKey;
     }
 
-    public void setSenderPublicKey(PublicKey senderPublicKey) {
-        this.senderPublicKey = senderPublicKey;
+    public void setMyPublicKey(PublicKey myPublicKey) {
+        this.myPublicKey = myPublicKey;
     }
 
-    public void setRecipientPublicKey(PublicKey recipientPublicKey) {
-        this.recipientPublicKey = recipientPublicKey;
+    public void setTheOtherPublicKey(PublicKey theOtherPublicKey) {
+        this.theOtherPublicKey = theOtherPublicKey;
     }
 
     private boolean checkAllKeysExist(){
-        if (senderPublicKey != null
-                && senderPrivateKey != null
-                && recipientPublicKey != null){
+        if (myPublicKey != null
+                && myPrivateKey != null
+                && theOtherPublicKey != null){
             return true;
         }
         return false;
@@ -72,7 +72,7 @@ public class PGP {
             // The hash code of a message is created using SHA-1.
             Signature signature = Signature.getInstance("SHA1withRSA");
             // The message digest is then encrypted using RSA with sender's private key.
-            signature.initSign(senderPrivateKey);
+            signature.initSign(myPrivateKey);
 
             // the file to send should be converted to byte format.
             byte[] messageBytes = msg.getBytes(StandardCharsets.UTF_8);
@@ -91,7 +91,7 @@ public class PGP {
 
             // Encrypt session key with the public key of receiver.
             Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-            rsaCipher.init(Cipher.ENCRYPT_MODE, recipientPublicKey);
+            rsaCipher.init(Cipher.ENCRYPT_MODE, theOtherPublicKey);
             byte[] encryptedCast128Key = rsaCipher.doFinal(sessionKey.getEncoded());
 
             return new EncryptedMessage(msgName, encryptedCast128Key, iv, digitalSignature, ciphertext);
@@ -112,20 +112,29 @@ public class PGP {
             return null;
         }
 
+        if(encryptedMessage == null){
+            System.err.println("Message is null");
+            return null;
+        }
+
+        byte[] encryptedSessionKey = encryptedMessage.getEncryptedSessionKey();
+        byte[] iv = encryptedMessage.getIv();
+        byte[] ciphertext = encryptedMessage.getCiphertext();
+        byte[] digitalSignature = encryptedMessage.getDigitalSignature();
+
         try {
             // Decrypt session key with the private key of the receiver
             Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-            rsaCipher.init(Cipher.DECRYPT_MODE, senderPrivateKey);
+            rsaCipher.init(Cipher.DECRYPT_MODE, myPrivateKey);
 
             // Check for null or empty encrypted session key
-            byte[] encryptedSessionKey = encryptedMessage.getEncryptedSessionKey();
+
             if (encryptedSessionKey == null || encryptedSessionKey.length == 0) {
                 System.err.println("Encrypted session key is null or empty.");
                 return null;
             }
 
             byte[] decryptedSessionKey = rsaCipher.doFinal(encryptedSessionKey);
-
             // Check for null or empty decrypted session key
             if (decryptedSessionKey == null || decryptedSessionKey.length == 0) {
                 System.err.println("Decrypted session key is null or empty.");
@@ -133,21 +142,21 @@ public class PGP {
             }
 
             // Reconstruct the session key
-            SecretKey sessionKey = new SecretKeySpec(decryptedSessionKey, "AES");
+            SecretKey sessionKey = new SecretKeySpec(decryptedSessionKey, 0, decryptedSessionKey.length, "AES");
 
             // Decrypt the message using the session key and IV
             Cipher cast128Cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            IvParameterSpec ivParameterSpec = new IvParameterSpec(encryptedMessage.getIv());
+            IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
             cast128Cipher.init(Cipher.DECRYPT_MODE, sessionKey, ivParameterSpec);
 
-            byte[] decryptedMessageBytes = cast128Cipher.doFinal(encryptedMessage.getCiphertext());
+            byte[] decryptedMessageBytes = cast128Cipher.doFinal(ciphertext);
 
             // Verify the digital signature using the sender's public key
             Signature signature = Signature.getInstance("SHA1withRSA");
-            signature.initVerify(senderPublicKey);
+            signature.initVerify(theOtherPublicKey);
             signature.update(decryptedMessageBytes);
 
-            if (!signature.verify(encryptedMessage.getDigitalSignature())) {
+            if (!signature.verify(digitalSignature)) {
                 System.err.println("Digital signature verification failed.");
                 return null;
             }
