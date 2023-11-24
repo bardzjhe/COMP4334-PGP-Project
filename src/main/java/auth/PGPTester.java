@@ -29,7 +29,7 @@ public class PGPTester {
 
             //System.out.println("Encrypted Message Name: " + encryptedMessage.getMsgName());
             System.out.println("Encrypted Session Key: " + bytesToHex(encryptedMessage.getEncryptedSessionKey()));
-            System.out.println("IV: " + bytesToHex(encryptedMessage.getIv()));
+//            System.out.println("IV: " + bytesToHex(encryptedMessage.getIv()));
             System.out.println("Digital Signature: " + bytesToHex(encryptedMessage.getDigitalSignature()));
             System.out.println("Ciphertext: " + bytesToHex(encryptedMessage.getCiphertext()));
 
