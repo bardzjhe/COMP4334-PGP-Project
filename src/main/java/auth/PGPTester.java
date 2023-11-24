@@ -7,7 +7,6 @@ import model.EncryptedMessage;
 
 public class PGPTester {
 
-
     public static void main(String[] args) {
         // generate keypairs
         KeyPair senderKeyPair = generateKeyPair();
@@ -20,7 +19,7 @@ public class PGPTester {
         pgp.setRecipientPublicKey(recipientKeyPair.getPublic());
 
         String msgName = "Test Message";
-        String originalMessage = "Hello, this is a test message.";
+        String originalMessage = "Hello.";
 
         // encryption
         System.out.println("Original Message: " + originalMessage);
@@ -59,6 +58,10 @@ public class PGPTester {
     }
 
     private static String bytesToHex(byte[] bytes) {
+        if (bytes == null) {
+            return "null";
+        }
+
         StringBuilder result = new StringBuilder();
         for (byte b : bytes) {
             result.append(String.format("%02X ", b));
