@@ -1,8 +1,13 @@
-import model.EncryptedMessage;
+import trustmodel.TrustLevel;
 
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -17,19 +22,50 @@ import java.util.concurrent.Executors;
 * resource usage. Thirty threads should be plenty in this project.
 * 2. The server manages the public keys.
 * 3. The server implements the trust model.
+ *
+ * When server forward message, it forwards three things:
+ * 1. Inform the recipient of the sender name
+ * 2. Trust level after calculation.
+ * 3. public key of the sender.
+ * 4. Encrypted message.
 */
 public class Server {
 
     final static int PORT = 7000;
 
-    private Map<String, PrintWriter> clients = new HashMap<>();
-    private Map<String, Map<String, String>> trustRelationships;
-
+    // used to send messages to the clients
+    private Map<String, ObjectOutputStream> clients = new HashMap<>();
+    // PGP trust model implementation
+    private Map<String, Map<String, TrustLevel>> trustNetwork;
 
     public Server() {
+        trustNetwork = new HashMap<>();
+    }
 
-        trustRelationships = new HashMap<>();
+    public void addTrust(String from, String to, TrustLevel level){
+        trustNetwork.putIfAbsent(from, new HashMap<>());
+        trustNetwork.get(from).put(to, level);
+    }
 
+    public TrustLevel getTrustLevel(String from, String to) {
+        if(trustNetwork.containsKey(from)){
+            Map<String, TrustLevel> tempMap = trustNetwork.get(from);
+            if(tempMap.containsKey(to)){
+                return tempMap.get(to);
+            }
+        }
+        return TrustLevel.NONE;
+    }
+
+    public Set<String> getTrustedBy(String user, TrustLevel level) {
+        Set<String> result = new HashSet<>();
+        for (String other : trustNetwork.keySet()) {
+            TrustLevel trustLevel = trustNetwork.get(other).getOrDefault(user, TrustLevel.NONE);
+            if (trustLevel == level) {
+                result.add(other);
+            }
+        }
+        return result;
     }
 
     public void start(){
@@ -40,6 +76,7 @@ public class Server {
                 try {
                     Socket connection = server.accept();
                     Callable<Void> task = new ClientHandler(connection);
+                    // submit the task to the thread pool for execution.
                     pool.submit(task);
                 } catch (IOException ex) {
                     System.err.println(ex);
@@ -50,11 +87,6 @@ public class Server {
             // Exception handling for server-level issues
             System.err.println(ex);
         }
-    }
-    public static void main(String[] args) {
-
-        Server server = new Server();
-        server.start();
     }
 
     private class ClientHandler implements Callable<Void> {
@@ -67,26 +99,37 @@ public class Server {
 
         @Override
         public Void call() throws Exception {
-            PrintWriter out = null;
+            ObjectOutputStream out = null;
             try {
 
-                BufferedReader in = new BufferedReader(
-                        new InputStreamReader(connection.getInputStream()));
-                out = new PrintWriter(connection.getOutputStream(), true);
-                String name = in.readLine();
+                // input stream and output streams for communication with clients.
+                ObjectInputStream in = new ObjectInputStream(connection.getInputStream());
+                out = new ObjectOutputStream(connection.getOutputStream());
+
+                // once establish one connection, send a welcome message.
+                String name = (String) in.readObject();
+                System.out.println("Name:" + name);
                 clients.put(name, out);
-                out.println("Welcome " + name);
+                out.writeObject("Message from the server: Welcome " + name + ", you have successfully connected to the server!");
 
+                // forward message
+                while ((name = (String) in.readObject()) != null) {
+                    String receiverName = (String) in.readObject();
+                    String message = (String) in.readObject();
+//                    EncryptedMessage encryptedMessage = (EncryptedMessage) in.readObject();
+//                    byte[] ciphertext = encryptedMessage.getCiphertext();
 
-                while ((name = in.readLine()) != null) {
-                    String receiverName = in.readLine();
-                    String message = in.readLine();
-                    message = "From " + name + " at " + new Date() + ": " + message;
+                    String formattedContent = String.format("From: %s\nTrust Level: %s\n\nMessage Content:\n%s",
+                            name, getTrustLevel(name, receiverName), message
+                    );
+
+                    System.out.println(receiverName + ": " + message);
                     if (clients.containsKey(receiverName)) {
-                        clients.get(receiverName).println(message);
+                        clients.get(receiverName).writeObject(formattedContent);
+
+
                     }
                 }
-
 
             } catch (IOException e) {
                 System.err.println(e);
@@ -96,12 +139,45 @@ public class Server {
                 } catch (IOException e) {
                     // ignore
                 }
+
+                // the client's PrintWriter is remove once connection is closed.
                 if (out != null) {
                     clients.values().remove(out);
                 }
             }
             return null;
         }
+    }
+
+    public PublicKey getPublicKey(String filename) throws Exception {
+        String key = new String(Files.readAllBytes(Paths.get(filename)));
+        String publicKeyPEM = key
+                .replace("-----BEGIN PUBLIC KEY-----", "")
+                .replaceAll(System.lineSeparator(), "")
+                .replace("-----END PUBLIC KEY-----", "");
+
+        byte[] encoded = Base64.getDecoder().decode(publicKeyPEM);
+
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encoded);
+        PublicKey publicKey = keyFactory.generatePublic(keySpec);
+        return publicKey;
+    }
+
+    public static void main(String[] args) {
+
+        Server server = new Server();
+
+        // Alice fully trusts Bob
+        server.addTrust("Alice", "Bob", TrustLevel.FULL);
+        // Alice partially trusts Carmen and Jane
+        server.addTrust("Alice", "Carmen", TrustLevel.PARTIAL);
+        server.addTrust("Alice", "Jane", TrustLevel.PARTIAL);
+        // Alice doesn't trust John
+        server.addTrust("Alice", "John", TrustLevel.NONE);
+
+        System.out.println("Server starts running...");
+        server.start();
     }
 }
 
