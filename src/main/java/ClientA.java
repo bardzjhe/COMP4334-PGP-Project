@@ -84,7 +84,6 @@ public class ClientA {
                                 textArea.append("---------------------\n");
                             }
 
-
                         }
                     } catch (IOException e) {
                         e.printStackTrace();

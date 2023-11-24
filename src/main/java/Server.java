@@ -1,4 +1,4 @@
-import common.TrustLevel;
+import trustmodel.TrustLevel;
 
 import java.io.*;
 import java.net.ServerSocket;
@@ -118,10 +118,13 @@ public class Server {
                     String message = (String) in.readObject();
 //                    EncryptedMessage encryptedMessage = (EncryptedMessage) in.readObject();
 //                    byte[] ciphertext = encryptedMessage.getCiphertext();
-                    message = "From " + name + ": " + message;
+                    message = "Message content " + name + ": " + message;
                     System.out.println(receiverName + ": " + message);
                     if (clients.containsKey(receiverName)) {
-                        clients.get(receiverName).writeObject(message);
+                        clients.get(receiverName).writeObject("From " + name + ", whose trust level: "
+                                + getTrustLevel(name, receiverName) + "\n" + message);
+
+
                     }
                 }
 

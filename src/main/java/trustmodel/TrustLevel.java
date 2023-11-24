@@ -1,4 +1,4 @@
-package common;
+package trustmodel;
 
 /**
  * @Author Anthony HE, anthony.zj.he@outlook.com

@@ -28,7 +28,6 @@ public class Alice {
                 generateKeyPair();
             }catch (Exception ex){}
         }
-
         
     }
 
