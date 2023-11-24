@@ -12,6 +12,8 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import static auth.PGPTester.bytesToHex;
+
 /**
  * @Authors: Anthony HE, anthony.zj.he@outlook.com
  * @Date 22/10/2023
@@ -84,7 +86,7 @@ public class PGP {
             // TODO: please note iv should be transmitted together. it's not a secret so we dont have to encrypt it.
             // https://stackoverflow.com/questions/38059749/handling-transfer-of-iv-initialization-vectors
             byte[] iv = cast128Cipher.getIV();
-            //System.out.println(iv);
+            //System.out.println(bytesToHex(iv));
             byte[] ciphertext = cast128Cipher.doFinal(messageBytes);
 
             // Encrypt session key with the public key of receiver.
@@ -149,7 +151,6 @@ public class PGP {
                 System.err.println("Digital signature verification failed.");
                 return null;
             }
-
 
             // Return the decrypted message
             return new String(decryptedMessageBytes, StandardCharsets.UTF_8);
