@@ -2,7 +2,11 @@ package Alice;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.Writer;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.*;
+import java.util.Base64;
 
 /**
  * @Author Anthony HE, anthony.zj.he@outlook.com
@@ -33,12 +37,18 @@ public class Alice {
         generator.initialize(2048, new SecureRandom());
         KeyPair pair = generator.generateKeyPair();
 
-        try(FileOutputStream fos = new FileOutputStream("./src/main/java/publickeys/AlicePublic.key")){
-            fos.write(pair.getPublic().getEncoded());
+        // Save public key in PEM format
+        try (Writer writer = Files.newBufferedWriter(Paths.get("./src/main/java/publickeys/AlicePublic.pem"))) {
+            writer.write("-----BEGIN PUBLIC KEY-----\n");
+            writer.write(Base64.getEncoder().encodeToString(pair.getPublic().getEncoded()));
+            writer.write("\n-----END PUBLIC KEY-----\n");
         }
 
-        try(FileOutputStream fos = new FileOutputStream("./src/main/java/Alice/AlicePrivate.key")){
-            fos.write(pair.getPrivate().getEncoded());
+        // Save private key in PEM format
+        try (Writer writer = Files.newBufferedWriter(Paths.get("./src/main/java/Alice/AlicePrivate.pem"))) {
+            writer.write("-----BEGIN PRIVATE KEY-----\n");
+            writer.write(Base64.getEncoder().encodeToString(pair.getPrivate().getEncoded()));
+            writer.write("\n-----END PRIVATE KEY-----\n");
         }
     }
 

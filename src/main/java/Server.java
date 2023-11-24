@@ -3,6 +3,11 @@ import common.TrustLevel;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.KeyFactory;
+import java.security.PublicKey;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -17,6 +22,12 @@ import java.util.concurrent.Executors;
 * resource usage. Thirty threads should be plenty in this project.
 * 2. The server manages the public keys.
 * 3. The server implements the trust model.
+ *
+ * When server forward message, it forwards three things:
+ * 1. Inform the recipient of the sender name
+ * 2. Trust level after calculation.
+ * 3. public key of the sender.
+ * 4. Encrypted message.
 */
 public class Server {
 
@@ -99,7 +110,7 @@ public class Server {
                 String name = (String) in.readObject();
                 System.out.println("Name:" + name);
                 clients.put(name, out);
-                out.writeObject("Welcome " + name);
+                out.writeObject("Message from the server: Welcome " + name + ", you have successfully connected to the server!");
 
                 // forward message
                 while ((name = (String) in.readObject()) != null) {
@@ -107,7 +118,7 @@ public class Server {
                     String message = (String) in.readObject();
 //                    EncryptedMessage encryptedMessage = (EncryptedMessage) in.readObject();
 //                    byte[] ciphertext = encryptedMessage.getCiphertext();
-                    message = "From " + name + " at " + new Date() + ": " + message;
+                    message = "From " + name + ": " + message;
                     System.out.println(receiverName + ": " + message);
                     if (clients.containsKey(receiverName)) {
                         clients.get(receiverName).writeObject(message);
@@ -130,6 +141,21 @@ public class Server {
             }
             return null;
         }
+    }
+
+    public PublicKey getPublicKey(String filename) throws Exception {
+        String key = new String(Files.readAllBytes(Paths.get(filename)));
+        String publicKeyPEM = key
+                .replace("-----BEGIN PUBLIC KEY-----", "")
+                .replaceAll(System.lineSeparator(), "")
+                .replace("-----END PUBLIC KEY-----", "");
+
+        byte[] encoded = Base64.getDecoder().decode(publicKeyPEM);
+
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encoded);
+        PublicKey publicKey = keyFactory.generatePublic(keySpec);
+        return publicKey;
     }
 
     public static void main(String[] args) {

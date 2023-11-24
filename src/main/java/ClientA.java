@@ -4,6 +4,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.*;
+import java.util.Date;
+
 /**
  * @Author Anthony HE, anthony.zj.he@outlook.com
  * @Date 19/11/2023
@@ -16,7 +18,7 @@ public class ClientA {
     private JTextField receiverNameField;
     private ObjectInputStream input;
     private ObjectOutputStream output;
-    private String clientName = "Client A"; // replace with your client's name
+    private String clientName = "Alice"; // replace with your client's name
 
     public ClientA() {
         JFrame frame = new JFrame("Email Application");
@@ -74,9 +76,15 @@ public class ClientA {
             public void run() {
                 while (true) {
                     try {
-                        String receivedMessage;
-                        while ((receivedMessage = (String) input.readObject()) != null) {
-                            textArea.append(receivedMessage + "\n");
+                        Object receivedMessage;
+                        while ((receivedMessage = input.readObject()) != null) {
+                            if(receivedMessage instanceof String){
+                                textArea.append("Email received at " + new Date() + "\n");
+                                textArea.append(receivedMessage + "\n");
+                                textArea.append("---------------------\n");
+                            }
+
+
                         }
                     } catch (IOException e) {
                         e.printStackTrace();
@@ -89,7 +97,7 @@ public class ClientA {
 
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setVisible(true);
-        System.out.println("D--");
+
     }
 
     public static void main(String[] args) {
