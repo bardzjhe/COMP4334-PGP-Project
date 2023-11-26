@@ -24,7 +24,7 @@ public class PGPTester {
         receiverPGP.setTheOtherPublicKey(senderKeyPair.getPublic());
 
         String msgName = "Test Message";
-        String originalMessage = "Hello. This is testing message";
+        String originalMessage = "The real tragedy of the poor is the poverty of their aspirations.";
 
         // encryption
         System.out.println("Original Message: " + originalMessage);

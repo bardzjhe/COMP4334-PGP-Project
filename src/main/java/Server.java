@@ -1,3 +1,4 @@
+import model.EncryptedMessage;
 import trustmodel.TrustLevel;
 
 import java.io.*;
@@ -14,21 +15,21 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
-* @Author Anthony HE, anthony.zj.he@outlook.com
-* @Date 15/10/2023
-* @Description: Multithreaded server
-*
-* 1. We used a fixed thread pool to limit the potential
-* resource usage. Thirty threads should be plenty in this project.
-* 2. The server manages the public keys.
-* 3. The server implements the trust model.
+ * @Author Anthony HE, anthony.zj.he@outlook.com
+ * @Date 15/10/2023
+ * @Description: Multithreaded server
+ *
+ * 1. We used a fixed thread pool to limit the potential
+ * resource usage. Thirty threads should be plenty in this project.
+ * 2. The server manages the public keys.
+ * 3. The server implements the trust model.
  *
  * When server forward message, it forwards three things:
  * 1. Inform the recipient of the sender name
  * 2. Trust level after calculation.
  * 3. public key of the sender.
  * 4. Encrypted message.
-*/
+ */
 public class Server {
 
     final static int PORT = 7000;
@@ -115,15 +116,16 @@ public class Server {
                 // forward message
                 while ((name = (String) in.readObject()) != null) {
                     String receiverName = (String) in.readObject();
-                    String message = (String) in.readObject();
-//                    EncryptedMessage encryptedMessage = (EncryptedMessage) in.readObject();
+//                    String message = (String) in.readObject();
+                    EncryptedMessage encryptedMessage = (EncryptedMessage) in.readObject();
 //                    byte[] ciphertext = encryptedMessage.getCiphertext();
+//                    EncryptedMessage encryptedMessage = (EncryptedMessage) in readObject();
 
                     String formattedContent = String.format("From: %s\nTrust Level: %s\n\nMessage Content:\n%s",
-                            name, getTrustLevel(name, receiverName), message
+                            name, getTrustLevel(name, receiverName), encryptedMessage
                     );
 
-                    System.out.println(receiverName + ": " + message);
+                    System.out.println(receiverName + "'s message is received by the server. ");
                     if (clients.containsKey(receiverName)) {
                         clients.get(receiverName).writeObject(formattedContent);
 
@@ -180,5 +182,3 @@ public class Server {
         server.start();
     }
 }
-
-
