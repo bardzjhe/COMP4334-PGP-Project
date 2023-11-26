@@ -4,6 +4,7 @@ import model.Client;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.security.*;
 
 /**
@@ -12,33 +13,8 @@ import java.security.*;
  * @Description:
  */
 public class Bob {
-    public Bob() {
-        File privateKeyFile = new File("./src/main/java/Bob/BobPrivate.key");
-        File publicKeyFile = new File("./src/main/java/publickeys/BobPublic.key");
-        if(!privateKeyFile.exists() || !publicKeyFile.exists()){
-            try{
-                generateKeyPair();
-            }catch (Exception ex){}
-        }
 
-
-    }
-
-    public void generateKeyPair() throws Exception {
-        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
-        generator.initialize(2048, new SecureRandom());
-        KeyPair pair = generator.generateKeyPair();
-
-        try(FileOutputStream fos = new FileOutputStream("./src/main/java/publickeys/BobPublic.key")){
-            fos.write(pair.getPublic().getEncoded());
-        }
-
-        try(FileOutputStream fos = new FileOutputStream("./src/main/java/Bob/BobPrivate.key")){
-            fos.write(pair.getPrivate().getEncoded());
-        }
-    }
-
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         new Client("Bob");
     }
 }

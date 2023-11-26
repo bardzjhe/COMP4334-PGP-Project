@@ -20,7 +20,7 @@ import java.util.Date;
 public class Client {
     private JTextArea textArea;
     private JTextField textField;
-    private JTextField receiverNameField;
+    static private JTextField receiverNameField;
     private ObjectInputStream input;
     private ObjectOutputStream output;
     private String clientName;
@@ -65,7 +65,7 @@ public class Client {
         KeyFactory kf = KeyFactory.getInstance("RSA");
         return kf.generatePublic(spec);
     }
-    public Client(String clientName) {
+    public Client(String clientName) throws IOException {
         this.clientName = clientName;
 
         try{
@@ -104,27 +104,47 @@ public class Client {
         PGP senderPGP = new PGP(128);
         PGP receiverPGP = new PGP(128);
 
+        Socket socket;
+        socket = new Socket("localhost", 7000);
+        try {
+
+            output = new ObjectOutputStream(socket.getOutputStream());
+            input = new ObjectInputStream(socket.getInputStream());
+
+            // Send clientName at the beginning
+            output.writeObject(clientName);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
         JButton sendButton = new JButton("Send");
         sendButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 try {
-                    // Send clientName and receiverName only once
-                    if (output != null) {
-                        output.writeObject(clientName);
-                        output.writeObject(receiverNameField.getText());
-                    }
+                    // Check if the socket is still connected
+                    if (socket != null && !socket.isClosed() && socket.isConnected()) {
+                        // Send clientName and receiverName only once
+                        if (output != null) {
+                            output.writeObject(clientName);
+                            output.writeObject(receiverNameField.getText());
+                        }
 
-                    String sendText = textField.getText();
-                    String msgName = "Message";
+                        String sendText = textField.getText();
+                        String msgName = "Message";
 
-                    senderPGP.setMyPrivateKey(myPrivateKey);
-                    senderPGP.setMyPublicKey(myPublicKey);
-                    senderPGP.setTheOtherPublicKey(getTheOtherPublicKey(receiverNameField.getText()));
+                        senderPGP.setMyPrivateKey(myPrivateKey);
+                        senderPGP.setMyPublicKey(myPublicKey);
+                        senderPGP.setTheOtherPublicKey(getTheOtherPublicKey(receiverNameField.getText()));
 
-                    EncryptedMessage encryptedMessage = senderPGP.encrypt(msgName, sendText);
+                        EncryptedMessage encryptedMessage = senderPGP.encrypt(msgName, sendText);
 
-                    if (output != null) {
-                        output.writeObject(encryptedMessage);
+                        if (output != null) {
+                            output.writeObject(encryptedMessage);
+                            System.out.println("Message sent: " + sendText);
+                        }
+
+                    } else {
+                        System.err.println("Socket is not connected.");
                     }
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
@@ -135,6 +155,7 @@ public class Client {
                 textField.setText("");
             }
         });
+
         panel.add(sendButton);
 
         // button size
@@ -144,26 +165,17 @@ public class Client {
         frame.getContentPane().add(new JScrollPane(textArea), BorderLayout.CENTER);
         frame.getContentPane().add(panel, BorderLayout.SOUTH);
         frame.pack();
-        Socket socket;
 
-        try {
-            socket = new Socket("localhost", 7000);
-            output = new ObjectOutputStream(socket.getOutputStream());
-            input = new ObjectInputStream(socket.getInputStream());
-
-            // Send clientName at the beginning
-            output.writeObject(clientName);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
         new Thread(new Runnable() {
             @Override
             public void run() {
+                Object receivedMessage;
                 while (true) {
                     try {
-                        Object receivedMessage = input.readObject();
-                        if (receivedMessage == null) {
+                        try {
+                            receivedMessage = input.readObject();
+                        } catch (EOFException e) {
                             break; // Exit the loop when no more messages are available
                         }
 
@@ -186,7 +198,6 @@ public class Client {
                             textArea.append("Email received at " + new Date() + "\n");
 
                             // decryption
-
                             receiverPGP.setMyPrivateKey(myPrivateKey);
                             receiverPGP.setMyPublicKey(myPublicKey);
                             receiverPGP.setTheOtherPublicKey(getTheOtherPublicKey(sender));
@@ -196,6 +207,7 @@ public class Client {
                             if (decryptedMessage != null) {
                                 System.out.println("Decrypted Message: " + decryptedMessage);
                                 textArea.append(envelope);
+                                textArea.append("Decrypted Email Content:\n\n");
                                 textArea.append(decryptedMessage + "\n");
                                 textArea.append("---------------------\n");
                             } else {

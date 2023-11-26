@@ -1,3 +1,4 @@
+import com.sun.xml.internal.ws.addressing.WsaActionUtil;
 import model.EncryptedMessage;
 import model.Message;
 import trustmodel.TrustLevel;
@@ -117,17 +118,20 @@ public class Server {
                 // forward message
                 while ((name = (String) in.readObject()) != null) {
                     String receiverName = (String) in.readObject();
+                    System.out.println("Receiver name: " + receiverName);
 //                    String message = (String) in.readObject();
+
                     EncryptedMessage encryptedMessage = (EncryptedMessage) in.readObject();
 //                    byte[] ciphertext = encryptedMessage.getCiphertext();
 //                    EncryptedMessage encryptedMessage = (EncryptedMessage) in readObject();
 
-                    String formattedContent = String.format("From: %s\nTrust Level: %s\n\nMessage Content:\n%s",
+
+                    String formattedContent = String.format("From: %s\nTrust Level: %s\n",
                             name, getTrustLevel(name, receiverName)
                     );
 
                     System.out.println(formattedContent);
-                    
+
                     Message messageToTransfer = new Message(name, formattedContent, encryptedMessage);
 
                     System.out.println(receiverName + "'s message is received by the server. ");
