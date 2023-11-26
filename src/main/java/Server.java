@@ -29,8 +29,7 @@ import java.util.concurrent.Executors;
  * When server forward message, it forwards three things:
  * 1. Inform the recipient of the sender name
  * 2. Trust level after calculation.
- * 3. public key of the sender.
- * 4. Encrypted message.
+ * 3. Encrypted message.
  */
 public class Server {
 
