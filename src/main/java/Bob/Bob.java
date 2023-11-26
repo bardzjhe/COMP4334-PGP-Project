@@ -1,5 +1,7 @@
 package Bob;
 
+import model.Client;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.security.*;
@@ -37,6 +39,6 @@ public class Bob {
     }
 
     public static void main(String[] args) {
-        Bob bob = new Bob();
+        new Client("Bob");
     }
 }

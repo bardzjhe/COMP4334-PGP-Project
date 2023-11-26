@@ -1,4 +1,5 @@
 import model.EncryptedMessage;
+import model.Message;
 import trustmodel.TrustLevel;
 
 import java.io.*;
@@ -122,13 +123,16 @@ public class Server {
 //                    EncryptedMessage encryptedMessage = (EncryptedMessage) in readObject();
 
                     String formattedContent = String.format("From: %s\nTrust Level: %s\n\nMessage Content:\n%s",
-                            name, getTrustLevel(name, receiverName), encryptedMessage
+                            name, getTrustLevel(name, receiverName)
                     );
+
+                    System.out.println(formattedContent);
+                    
+                    Message messageToTransfer = new Message(name, formattedContent, encryptedMessage);
 
                     System.out.println(receiverName + "'s message is received by the server. ");
                     if (clients.containsKey(receiverName)) {
-                        clients.get(receiverName).writeObject(formattedContent);
-
+                        clients.get(receiverName).writeObject(messageToTransfer);
 
                     }
                 }

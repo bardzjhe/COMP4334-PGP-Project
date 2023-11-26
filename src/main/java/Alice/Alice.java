@@ -1,5 +1,7 @@
 package Alice;
 
+import model.Client;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.Writer;
@@ -57,6 +59,6 @@ public class Alice {
 
     public static void main(String[] args) throws Exception {
 
-
+        new Client("Alice");
     }
 }

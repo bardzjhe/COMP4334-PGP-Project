@@ -1,10 +1,4 @@
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.*;
-import java.net.*;
-import java.util.Date;
+import model.Client;
 
 /**
  * @Author Anthony HE, anthony.zj.he@outlook.com
@@ -14,6 +8,6 @@ import java.util.Date;
 
 public class ClientB {
     public static void main(String[] args) {
-        new chatbox("ClientB");
+        new Client("ClientB");
     }
 }

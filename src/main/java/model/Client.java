@@ -1,5 +1,8 @@
+package model;
+
 import auth.PGP;
 import model.EncryptedMessage;
+import model.Message;
 
 import javax.swing.*;
 import java.awt.*;
@@ -7,37 +10,79 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
 import java.net.*;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.*;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.util.Date;
 
-public class chatbox {
+public class Client {
     private JTextArea textArea;
     private JTextField textField;
     private JTextField receiverNameField;
     private ObjectInputStream input;
     private ObjectOutputStream output;
     private String clientName;
-    private KeyPair senderKeyPair;  // Declare senderKeyPair as a member variable
 
-    private static KeyPair generateKeyPair() {
-        try {
-            KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
-            keyPairGenerator.initialize(2048);
-            return keyPairGenerator.generateKeyPair();
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+    private PublicKey myPublicKey;
+
+    private PrivateKey myPrivateKey;
+
+
+    public void generateKeyPair() throws Exception {
+        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
+        generator.initialize(2048, new SecureRandom());
+        KeyPair pair = generator.generateKeyPair();
+
+        try(FileOutputStream fos = new FileOutputStream("./src/main/java/publickeys/" + clientName + "Public.key")){
+            fos.write(pair.getPublic().getEncoded());
+        }
+
+        try(FileOutputStream fos = new FileOutputStream("./src/main/java/" + clientName + "/" + clientName + "Private.key")){
+            fos.write(pair.getPrivate().getEncoded());
         }
     }
 
-    public chatbox(String clientName) {
+    public PublicKey getPublicKey(String filename) throws Exception {
+        byte[] keyBytes = Files.readAllBytes(Paths.get(filename));
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(keyBytes);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        return kf.generatePublic(spec);
+    }
+
+    private PrivateKey getPrivateKey(String filename) throws Exception {
+        byte[] keyBytes = Files.readAllBytes(Paths.get(filename));
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(keyBytes);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        return kf.generatePrivate(spec);
+    }
+
+    public PublicKey getTheOtherPublicKey(String theOtherName) throws Exception{
+        byte[] keyBytes = Files.readAllBytes(Paths.get("./src/main/java/publickeys/" +
+                theOtherName + "Public.key"));
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(keyBytes);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        return kf.generatePublic(spec);
+    }
+    public Client(String clientName) {
         this.clientName = clientName;
 
-        // Generate senderKeyPair once during object creation
-        senderKeyPair = generateKeyPair();
+        try{
+            File publicKeyFile = new File("./src/main/java/publickeys/" + clientName + "Public.key");
+            File privateKeyFile = new File("./src/main/java/" + clientName + "/" + clientName + "Private.key");
+            if(!privateKeyFile.exists() || !publicKeyFile.exists()){
+                try{
+                    generateKeyPair();
+                }catch (Exception ex){}
+            }
+            myPublicKey = getPublicKey("./src/main/java/publickeys/" + clientName + "Public.key");
+            myPrivateKey =  getPrivateKey("./src/main/java/" + clientName + "/" + clientName + "Private.key");
+        }catch (Exception ex){
+            System.err.println(ex);
+        }
 
-        JFrame frame = new JFrame("GRP 23's Email Application");
+        JFrame frame = new JFrame("GRP 23 Email Application");
         textArea = new JTextArea(20, 50);
         textArea.setEditable(false);
 
@@ -55,6 +100,10 @@ public class chatbox {
         panel.add(new JLabel("Message:"));
         panel.add(textField);
 
+        // Two PGP instances used for encryption and decryption
+        PGP senderPGP = new PGP(128);
+        PGP receiverPGP = new PGP(128);
+
         JButton sendButton = new JButton("Send");
         sendButton.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -68,23 +117,19 @@ public class chatbox {
                     String sendText = textField.getText();
                     String msgName = "Message";
 
-                    // ENCRYPT BEFORE SENDING MESSAGE
-                    KeyPair recipientKeyPair = generateKeyPair();
-
-                    PGP senderPGP = new PGP(128);
-
-                    senderPGP.setMyPrivateKey(senderKeyPair.getPrivate());
-                    senderPGP.setMyPublicKey(senderKeyPair.getPublic());
-                    senderPGP.setTheOtherPublicKey(recipientKeyPair.getPublic());
+                    senderPGP.setMyPrivateKey(myPrivateKey);
+                    senderPGP.setMyPublicKey(myPublicKey);
+                    senderPGP.setTheOtherPublicKey(getTheOtherPublicKey(receiverNameField.getText()));
 
                     EncryptedMessage encryptedMessage = senderPGP.encrypt(msgName, sendText);
-                    //
 
                     if (output != null) {
                         output.writeObject(encryptedMessage);
                     }
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
+                } catch (Exception ex) {
+                    System.err.println("Recipient name error");
                 }
 
                 textField.setText("");
@@ -128,33 +173,43 @@ public class chatbox {
                             textArea.append(receivedMessage + "\n");
                             textArea.append("---------------------\n");
 
-                        } else {
-                            System.out.printf("EncryptedMessage received.");
+                        } else if(receivedMessage instanceof Message) {
+                            System.out.printf("Email Message received.");
+                            System.out.printf("Now do decryption. ");
 
-                            EncryptedMessage encryptedMessage = (EncryptedMessage) receivedMessage;
+                            Message message = (Message) receivedMessage;
+
+                            String sender = message.getSender();
+                            String envelope = message.getFormattedMessage();
+                            EncryptedMessage encryptedMessage = message.getEncryptedMessage();
 
                             textArea.append("Email received at " + new Date() + "\n");
 
                             // decryption
-                            KeyPair recipientKeyPair = generateKeyPair();
-                            PGP receiverPGP = new PGP(128);
 
-                            receiverPGP.setMyPrivateKey(recipientKeyPair.getPrivate());
-                            receiverPGP.setMyPublicKey(recipientKeyPair.getPublic());
-                            receiverPGP.setTheOtherPublicKey(senderKeyPair.getPublic());
+                            receiverPGP.setMyPrivateKey(myPrivateKey);
+                            receiverPGP.setMyPublicKey(myPublicKey);
+                            receiverPGP.setTheOtherPublicKey(getTheOtherPublicKey(sender));
 
                             String decryptedMessage = receiverPGP.decrypt(encryptedMessage);
 
                             if (decryptedMessage != null) {
                                 System.out.println("Decrypted Message: " + decryptedMessage);
+                                textArea.append(envelope);
                                 textArea.append(decryptedMessage + "\n");
                                 textArea.append("---------------------\n");
                             } else {
                                 System.out.println("Decryption failed");
                             }
+                        }else{
+                            System.out.printf("Invalid message received.");
+                            textArea.append("Invalid message received.\n");
+                            textArea.append("---------------------\n");
                         }
                     } catch (IOException | ClassNotFoundException e) {
                         e.printStackTrace();
+                    } catch (Exception e) {
+                        System.err.println("Sender's public key not found");
                     }
                 }
             }
