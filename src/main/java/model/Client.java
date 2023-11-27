@@ -125,7 +125,7 @@ public class Client {
                     if (socket != null && !socket.isClosed() && socket.isConnected()) {
                         // Send clientName and receiverName only once
                         if (output != null) {
-                            output.writeObject(clientName);
+                            output.writeObject(clientName.trim());
                             output.writeObject(receiverNameField.getText());
                         }
 
@@ -147,7 +147,7 @@ public class Client {
                         System.err.println("Socket is not connected.");
                     }
                 } catch (IOException ex) {
-                    throw new RuntimeException(ex);
+                    System.err.println("Cannot find public key file, please check if the recipient exists. ");
                 } catch (Exception ex) {
                     System.err.println("Recipient name error");
                 }
@@ -186,8 +186,8 @@ public class Client {
                             textArea.append("---------------------\n");
 
                         } else if(receivedMessage instanceof Message) {
-                            System.out.printf("Email Message received.");
-                            System.out.printf("Now do decryption. ");
+                            System.out.println("Email Message received.");
+                            System.out.println("Now do decryption. ");
 
                             Message message = (Message) receivedMessage;
 

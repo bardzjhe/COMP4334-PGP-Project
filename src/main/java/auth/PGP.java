@@ -63,7 +63,7 @@ public class PGP {
 
         try {
 
-            // Session key based on CAST-128
+            // Session key based on AES
             KeyGenerator keyGen = KeyGenerator.getInstance("AES");
             keyGen.init(keySize); // Initialize the key generator to create a key of size 128 bits.
             SecretKey sessionKey = keyGen.generateKey();
@@ -80,14 +80,14 @@ public class PGP {
             byte[] digitalSignature = signature.sign();
 
             // Encrypt the byte message using session key.
-            Cipher cast128Cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            cast128Cipher.init(Cipher.ENCRYPT_MODE, sessionKey);
+            Cipher aesCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            aesCipher.init(Cipher.ENCRYPT_MODE, sessionKey);
 
             // TODO: please note iv should be transmitted together. it's not a secret so we dont have to encrypt it.
             // https://stackoverflow.com/questions/38059749/handling-transfer-of-iv-initialization-vectors
-            byte[] iv = cast128Cipher.getIV();
+            byte[] iv = aesCipher.getIV();
             //System.out.println(bytesToHex(iv));
-            byte[] ciphertext = cast128Cipher.doFinal(messageBytes);
+            byte[] ciphertext = aesCipher.doFinal(messageBytes);
 
             // Encrypt session key with the public key of receiver.
             Cipher rsaCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
@@ -145,11 +145,11 @@ public class PGP {
             SecretKey sessionKey = new SecretKeySpec(decryptedSessionKey, 0, decryptedSessionKey.length, "AES");
 
             // Decrypt the message using the session key and IV
-            Cipher cast128Cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+            Cipher aesCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
             IvParameterSpec ivParameterSpec = new IvParameterSpec(iv);
-            cast128Cipher.init(Cipher.DECRYPT_MODE, sessionKey, ivParameterSpec);
+            aesCipher.init(Cipher.DECRYPT_MODE, sessionKey, ivParameterSpec);
 
-            byte[] decryptedMessageBytes = cast128Cipher.doFinal(ciphertext);
+            byte[] decryptedMessageBytes = aesCipher.doFinal(ciphertext);
 
             // Verify the digital signature using the sender's public key
             Signature signature = Signature.getInstance("SHA1withRSA");
