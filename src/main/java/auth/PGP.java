@@ -17,7 +17,7 @@ import javax.crypto.spec.SecretKeySpec;
 /**
  * @Authors: Anthony HE, anthony.zj.he@outlook.com
  * @Date 22/10/2023
- * @Description:
+ * @Description: PGP Encryption and Decryption implementation.
  */
 public class PGP {
     private static final Logger LOGGER = Logger.getLogger( PGP.class.getName() );
@@ -27,7 +27,6 @@ public class PGP {
     private PrivateKey myPrivateKey;
     // others' keys
     private PublicKey theOtherPublicKey;
-
 
     public PGP(int keySize) {
         this.keySize = keySize;
@@ -83,10 +82,14 @@ public class PGP {
             Cipher aesCipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
             aesCipher.init(Cipher.ENCRYPT_MODE, sessionKey);
 
-            // TODO: please note iv should be transmitted together. it's not a secret so we dont have to encrypt it.
-            // https://stackoverflow.com/questions/38059749/handling-transfer-of-iv-initialization-vectors
+            // Initialization vector should be transmitted together.
+            // It's not a secret so we dont have to encrypt it.
+            // Reference: https://stackoverflow.com/questions/38059749/handling-transfer-of-iv-initialization-vectors
             byte[] iv = aesCipher.getIV();
+
+            //test code
             //System.out.println(bytesToHex(iv));
+
             byte[] ciphertext = aesCipher.doFinal(messageBytes);
 
             // Encrypt session key with the public key of receiver.
@@ -127,7 +130,6 @@ public class PGP {
             rsaCipher.init(Cipher.DECRYPT_MODE, myPrivateKey);
 
             // Check for null or empty encrypted session key
-
             if (encryptedSessionKey == null || encryptedSessionKey.length == 0) {
                 System.err.println("Encrypted session key is null or empty.");
                 return null;

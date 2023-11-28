@@ -25,7 +25,7 @@ public class EncryptedMessage implements Serializable {
 
     /* Message */
     private Date fileTimestamp;
-    private String filename;
+    private String filename; // indicate email type (email/server notification), no need to encrypt
     private byte[] ciphertext;
 
 

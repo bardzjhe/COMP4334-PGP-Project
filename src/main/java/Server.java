@@ -184,7 +184,6 @@ public class Server {
 //                    byte[] ciphertext = encryptedMessage.getCiphertext();
 //                    EncryptedMessage encryptedMessage = (EncryptedMessage) in readObject();
 
-
                     String formattedContent = String.format("From: %s\nTrust Level: %s\n",
                             name, getTrustLevel(name, receiverName)
                     );
@@ -196,7 +195,6 @@ public class Server {
                     System.out.println(receiverName + "'s message is received by the server. ");
                     if (clients.containsKey(receiverName)) {
                         clients.get(receiverName).writeObject(messageToTransfer);
-
                     }
                 }
 
@@ -251,10 +249,7 @@ public class Server {
         server.addTrust("Jane", "Eve", TrustLevel.FULL);
 
 
-        TrustLevel temp = server.getTrustLevel("Alice", "David");
-        System.out.println(temp);
-
-//        System.out.println("Server starts running...");
-//        server.start();
+        System.out.println("Server starts running...");
+        server.start();
     }
 }

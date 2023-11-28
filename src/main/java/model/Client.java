@@ -20,6 +20,7 @@ import java.util.Date;
 public class Client {
     private JTextArea textArea;
     private JTextField textField;
+    private JTextField subjectField;
     static private JTextField receiverNameField;
     private ObjectInputStream input;
     private ObjectOutputStream output;
@@ -29,7 +30,10 @@ public class Client {
 
     private PrivateKey myPrivateKey;
 
-
+    /**
+     * generates key pairs and store in the files.
+     * @throws Exception
+     */
     public void generateKeyPair() throws Exception {
         KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
         generator.initialize(2048, new SecureRandom());
@@ -58,6 +62,12 @@ public class Client {
         return kf.generatePrivate(spec);
     }
 
+    /**
+     * the other refers to the corresponding sender or recipient.
+     * @param theOtherName
+     * @return
+     * @throws Exception
+     */
     public PublicKey getTheOtherPublicKey(String theOtherName) throws Exception{
         byte[] keyBytes = Files.readAllBytes(Paths.get("./src/main/java/publickeys/" +
                 theOtherName + "Public.key"));
@@ -65,6 +75,7 @@ public class Client {
         KeyFactory kf = KeyFactory.getInstance("RSA");
         return kf.generatePublic(spec);
     }
+
     public Client(String clientName) throws IOException {
         this.clientName = clientName;
 
@@ -90,13 +101,16 @@ public class Client {
         Font textAreaFont = new Font("Arial", Font.PLAIN, 16); // 16是字体大小
         textArea.setFont(textAreaFont);
 
-        textField = new JTextField(50);
         receiverNameField = new JTextField(50);
+        subjectField = new JTextField(50);
+        textField = new JTextField(50);
 
         JPanel panel = new JPanel();
         panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.add(new JLabel("Receiver Name:"));
         panel.add(receiverNameField);
+        panel.add(new JLabel("Email Subject:"));
+        panel.add(subjectField);
         panel.add(new JLabel("Message:"));
         panel.add(textField);
 
@@ -129,6 +143,7 @@ public class Client {
                             output.writeObject(receiverNameField.getText());
                         }
 
+                        String subject = subjectField.getText();
                         String sendText = textField.getText();
                         String msgName = "Message";
 
@@ -136,7 +151,11 @@ public class Client {
                         senderPGP.setMyPublicKey(myPublicKey);
                         senderPGP.setTheOtherPublicKey(getTheOtherPublicKey(receiverNameField.getText()));
 
-                        EncryptedMessage encryptedMessage = senderPGP.encrypt(msgName, sendText);
+                        String message2Encrypt = "Subject: " + subject + "\n\n" +
+                                sendText + "\n\n" +
+                                "Best regards,\n" +
+                                clientName;
+                        EncryptedMessage encryptedMessage = senderPGP.encrypt(msgName, message2Encrypt);
 
                         if (output != null) {
                             output.writeObject(encryptedMessage);
@@ -152,6 +171,7 @@ public class Client {
                     System.err.println("Recipient name error");
                 }
 
+                subjectField.setText("");
                 textField.setText("");
             }
         });
@@ -207,7 +227,7 @@ public class Client {
                             if (decryptedMessage != null) {
                                 System.out.println("Decrypted Message: " + decryptedMessage);
                                 textArea.append(envelope);
-                                textArea.append("Decrypted Email Content:\n\n");
+                                textArea.append("---Decrypted Content---\n\n");
                                 textArea.append(decryptedMessage + "\n");
                                 textArea.append("---------------------\n");
                             } else {
