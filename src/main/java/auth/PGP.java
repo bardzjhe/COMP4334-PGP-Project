@@ -12,7 +12,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-import static auth.PGPTester.bytesToHex;
+
 
 /**
  * @Authors: Anthony HE, anthony.zj.he@outlook.com
@@ -102,7 +102,6 @@ public class PGP {
             LOGGER.log( Level.SEVERE, ex.toString(), ex );
             return null;
         }
-
     }
 
     public String decrypt(EncryptedMessage encryptedMessage) {

@@ -19,17 +19,18 @@ import java.util.concurrent.Executors;
 /**
  * @Author Anthony HE, anthony.zj.he@outlook.com
  * @Date 15/10/2023
- * @Description: Multithreaded server
+ * @Description: Multithreaded email server
  *
+ * Implementation introduction:
  * 1. We used a fixed thread pool to limit the potential
- * resource usage. Thirty threads should be plenty in this project.
- * 2. The server manages the public keys.
+ * resource usage.
+ * 2. The server forwards the encrypted message.
  * 3. The server implements the trust model.
  *
  * When server forward message, it forwards three things:
- * 1. Inform the recipient of the sender name
+ * 1. Encrypted message.
  * 2. Trust level after calculation.
- * 3. Encrypted message.
+ * 3. Inform the recipient of other information, including sender name.
  */
 public class Server {
 
@@ -37,7 +38,7 @@ public class Server {
 
     // used to send messages to the clients
     private Map<String, ObjectOutputStream> clients = new HashMap<>();
-    // PGP trust model implementation
+
     private Map<String, Map<String, TrustLevel>> trustNetwork;
 
     public Server() {
@@ -49,25 +50,84 @@ public class Server {
         trustNetwork.get(from).put(to, level);
     }
 
+    /**
+     * Note that the trust relationship is in one way, not bidirectional.
+     * Say if A fully trusts B, it doesn't necessarily mean B fully trusts A.
+     *
+     * Here we illustrate our implementation of trust model.
+     * Case 1:
+     *      If from has direct knowledge of to, then it will return the TrustLevel directly.
+     *
+     * Case 2:
+     *      If from has no directly knowledge of to, then it will try to check if its
+     *      fully trusts parties have directly knowledge of to.
+     *          If yes, then it will compute and return the Trust level.
+     *          If no, then it will return NONE trust.
+     * Reference: Course slides.
+     * @param from
+     * @param to
+     * @return the level that from trusts to.
+     */
     public TrustLevel getTrustLevel(String from, String to) {
+
         if(trustNetwork.containsKey(from)){
             Map<String, TrustLevel> tempMap = trustNetwork.get(from);
+            // if from directly fully trusts to, then return directly.
+
+            // Case 1
             if(tempMap.containsKey(to)){
                 return tempMap.get(to);
+
+                // Case
+            }else{
+
+                double sum = 0;
+                Map<String, TrustLevel> innerMap = trustNetwork.get(from);
+
+                for (Map.Entry<String, TrustLevel> entry : innerMap.entrySet()) {
+                    if(entry.getValue() != TrustLevel.NONE){
+                        Set<String> fullyTrustedParties = getFullyTrustedParties(entry.getKey());
+                        if(fullyTrustedParties.contains(to) && entry.getValue()==TrustLevel.FULL){
+                            sum = 1;
+                        }
+                        else if(fullyTrustedParties.contains(to) && entry.getValue()==TrustLevel.PARTIAL) {
+                            sum += 0.5;
+                        }
+                        if(sum == 1){
+                            break;
+                        }
+                    }
+                }
+
+                if(sum == 1){
+                    return TrustLevel.FULL;
+                }
+                if(sum == 0.5){
+                    return TrustLevel.PARTIAL;
+                }
             }
         }
+
+
         return TrustLevel.NONE;
     }
 
-    public Set<String> getTrustedBy(String user, TrustLevel level) {
-        Set<String> result = new HashSet<>();
-        for (String other : trustNetwork.keySet()) {
-            TrustLevel trustLevel = trustNetwork.get(other).getOrDefault(user, TrustLevel.NONE);
-            if (trustLevel == level) {
-                result.add(other);
+    /**
+     * In our design, only fully trusted party can certificate the public key.
+     * @param from
+     * @return a set of fully trusted parties of from
+     */
+    public Set<String> getFullyTrustedParties(String from) {
+        Set<String> fullyTrustedParties = new HashSet<>();
+        if (trustNetwork.containsKey(from)) {
+            for (Map.Entry<String, TrustLevel> entry : trustNetwork.get(from).entrySet()) {
+                if (entry.getValue() == TrustLevel.FULL) {
+                    fullyTrustedParties.add(entry.getKey());
+                    fullyTrustedParties.addAll(getFullyTrustedParties(entry.getKey()));
+                }
             }
         }
-        return result;
+        return fullyTrustedParties;
     }
 
     public void start(){
@@ -185,7 +245,16 @@ public class Server {
         // Alice doesn't trust John
         server.addTrust("Alice", "John", TrustLevel.NONE);
 
-        System.out.println("Server starts running...");
-        server.start();
+        server.addTrust("Bob", "Cali", TrustLevel.FULL);
+        server.addTrust("Carmen", "David", TrustLevel.FULL);
+        server.addTrust("Jane", "David", TrustLevel.FULL);
+        server.addTrust("Jane", "Eve", TrustLevel.FULL);
+
+
+        TrustLevel temp = server.getTrustLevel("Alice", "David");
+        System.out.println(temp);
+
+//        System.out.println("Server starts running...");
+//        server.start();
     }
 }

@@ -8,7 +8,12 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 
-
+/**
+ * This class tests the encryption and decryption methods in our PGP.
+ *
+ * We provide a wide range of testing cases to verify the effectiveness of
+ * our PGP implementation.
+ */
 public class PGPTester {
 
     PGP senderPGP;
@@ -16,7 +21,7 @@ public class PGPTester {
 
 
     @BeforeEach
-    public void test1(){
+    public void test(){
 
         // generate keypairs
         KeyPair senderKeyPair = generateKeyPair();
@@ -35,6 +40,9 @@ public class PGPTester {
 
     }
 
+    /**
+     * We provide a wide range of testing cases.
+     */
     @Test
     void testEquals(){
         // basic case
@@ -53,8 +61,9 @@ public class PGPTester {
         assertEquals("Hello World", encryptAndDecrypt("Hello World"));
         // Long Input
         assertEquals("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.", encryptAndDecrypt("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."));
-        // Non-ASCII Characters
+        // Non-ASCII Characters ()
         assertEquals("こんにちは", encryptAndDecrypt("こんにちは"));
+        assertEquals("你好", encryptAndDecrypt("你好"));
         // Case with Numbers, Letters, and Special Characters
         assertEquals("abc123!@#", encryptAndDecrypt("abc123!@#"));
     }
