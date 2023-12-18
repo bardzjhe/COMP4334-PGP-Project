@@ -83,7 +83,7 @@ public class PGP {
             aesCipher.init(Cipher.ENCRYPT_MODE, sessionKey);
 
             // Initialization vector should be transmitted together.
-            // It's not a secret so we dont have to encrypt it.
+            // It's not a secret, so we don't have to encrypt it.
             // Reference: https://stackoverflow.com/questions/38059749/handling-transfer-of-iv-initialization-vectors
             byte[] iv = aesCipher.getIV();
 

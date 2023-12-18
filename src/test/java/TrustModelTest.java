@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * @Author Anthony HE, anthony.zj.he@outlook.com
  * @Date 28/11/2023
- * @Description:
+ * @Description: Trust Model test: how the recipient trusts the email sender.
  */
 public class TrustModelTest {
 
@@ -38,6 +38,7 @@ public class TrustModelTest {
         assertEquals(TrustLevel.FULL, server.getTrustLevel("Alice", "Bob"));
         assertEquals(TrustLevel.PARTIAL, server.getTrustLevel("Alice", "Carmen"));
         assertEquals(TrustLevel.NONE, server.getTrustLevel("Alice", "John"));
+
         // Test case 2: one way test. Alice fully trusts Bob, but not visa versa.
         assertEquals(TrustLevel.NONE, server.getTrustLevel("Bob", "Alice"));
 
@@ -49,7 +50,7 @@ public class TrustModelTest {
         // and therefore, Alice will fully trust David according to our design
         assertEquals(TrustLevel.FULL, server.getTrustLevel("Alice", "David"));
         // Alice partially trusts Jane, and Jane fully trusts Eve.
-        // the score is 0.5,
+        // the score it computes is only 0.5,
         // and therefore, Alice will partially trust Eve
         assertEquals(TrustLevel.PARTIAL, server.getTrustLevel("Alice", "Eve"));
     }

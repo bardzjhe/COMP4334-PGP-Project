@@ -1,8 +1,6 @@
 package model;
 
 import auth.PGP;
-import model.EncryptedMessage;
-import model.Message;
 
 import javax.swing.*;
 import java.awt.*;
@@ -83,6 +81,7 @@ public class Client {
             File publicKeyFile = new File("./src/main/java/publickeys/" + clientName + "Public.key");
             File privateKeyFile = new File("./src/main/java/" + clientName + "/" + clientName + "Private.key");
             if(!privateKeyFile.exists() || !publicKeyFile.exists()){
+                // generate the key files if it fails to read it.
                 try{
                     generateKeyPair();
                 }catch (Exception ex){}
@@ -137,6 +136,7 @@ public class Client {
                 try {
                     // Check if the socket is still connected
                     if (socket != null && !socket.isClosed() && socket.isConnected()) {
+
                         // Send clientName and receiverName only once
                         if (output != null) {
                             output.writeObject(clientName.trim());
@@ -165,17 +165,18 @@ public class Client {
                     } else {
                         System.err.println("Socket is not connected.");
                     }
+
                 } catch (IOException ex) {
                     System.err.println("Cannot find public key file, please check if the recipient exists. ");
                 } catch (Exception ex) {
                     System.err.println("Recipient name error");
                 }
 
+                // clean the text field.
                 subjectField.setText("");
                 textField.setText("");
             }
         });
-
         panel.add(sendButton);
 
         // button size
@@ -185,7 +186,6 @@ public class Client {
         frame.getContentPane().add(new JScrollPane(textArea), BorderLayout.CENTER);
         frame.getContentPane().add(panel, BorderLayout.SOUTH);
         frame.pack();
-
 
         new Thread(new Runnable() {
             @Override
@@ -205,7 +205,7 @@ public class Client {
                             textArea.append(receivedMessage + "\n");
                             textArea.append("---------------------\n");
 
-                        } else if(receivedMessage instanceof Message) {
+                        } else if (receivedMessage instanceof Message) {
                             System.out.println("Email Message received.");
                             System.out.println("Now do decryption. ");
 

@@ -19,7 +19,6 @@ public class PGPTester {
     PGP senderPGP;
     PGP receiverPGP;
 
-
     @BeforeEach
     public void test(){
 

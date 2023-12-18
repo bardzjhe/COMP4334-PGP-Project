@@ -1,4 +1,3 @@
-import com.sun.xml.internal.ws.addressing.WsaActionUtil;
 import model.EncryptedMessage;
 import model.Message;
 import trustmodel.TrustLevel;
@@ -6,18 +5,17 @@ import trustmodel.TrustLevel;
 import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.security.KeyFactory;
-import java.security.PublicKey;
-import java.security.spec.X509EncodedKeySpec;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Logger;
+import java.util.logging.Level;
+import java.util.logging.FileHandler;
+import java.util.logging.SimpleFormatter;
 
 /**
- * @Author Anthony HE, anthony.zj.he@outlook.com
+ * @Author Anthony HE AND Melvin WANG
  * @Date 15/10/2023
  * @Description: Multithreaded email server
  *
@@ -27,10 +25,13 @@ import java.util.concurrent.Executors;
  * 2. The server forwards the encrypted message.
  * 3. The server implements the trust model.
  *
- * When server forward message, it forwards three things:
- * 1. Encrypted message.
- * 2. Trust level after calculation.
- * 3. Inform the recipient of other information, including sender name.
+ * When the server forwards message, it forwards three items:
+ * 1. Encrypted message, which the server is not allowed to decrypt,
+ * to prevent insider threat. --> Confidentiality
+ * 2. Trust level after calculation (To what extent should the recipient
+ * trust the sender). --> Trust Model
+ * 3. Inform the recipient of other information, including actual
+ * sender name verified by to server.  --> Help with Authentication.
  */
 public class Server {
 
@@ -40,9 +41,20 @@ public class Server {
     private Map<String, ObjectOutputStream> clients = new HashMap<>();
 
     private Map<String, Map<String, TrustLevel>> trustNetwork;
+    private final static Logger LOGGER = Logger.getLogger(Server.class.getName());
 
     public Server() {
         trustNetwork = new HashMap<>();
+    }
+
+    static {
+        try {
+            FileHandler fileHandler = new FileHandler("server.log", true);
+            fileHandler.setFormatter(new SimpleFormatter());
+            LOGGER.addHandler(fileHandler);
+        } catch (IOException e) {
+            LOGGER.log(Level.SEVERE, "File logger not working.", e);
+        }
     }
 
     public void addTrust(String from, String to, TrustLevel level){
@@ -52,45 +64,46 @@ public class Server {
 
     /**
      * Note that the trust relationship is in one way, not bidirectional.
-     * Say if A fully trusts B, it doesn't necessarily mean B fully trusts A.
+     * For example: if A fully trusts B, it doesn't necessarily mean B fully trusts A.
      *
      * Here we illustrate our implementation of trust model.
      * Case 1:
-     *      If from has direct knowledge of to, then it will return the TrustLevel directly.
+     *      If to has direct knowledge of from, then it will return the TrustLevel directly.
      *
      * Case 2:
-     *      If from has no directly knowledge of to, then it will try to check if its
-     *      fully trusts parties have directly knowledge of to.
+     *      If to has no directly knowledge of from, then it will try to check whether any of its
+     *      fully/partially trusted parties fully trust from.
      *          If yes, then it will compute and return the Trust level.
      *          If no, then it will return NONE trust.
+     *
      * Reference: Course slides.
      * @param from
      * @param to
-     * @return the level that from trusts to.
+     * @return the level that to should trust from.
      */
-    public TrustLevel getTrustLevel(String from, String to) {
+    public TrustLevel getTrustLevel(String to, String from) {
 
-        if(trustNetwork.containsKey(from)){
-            Map<String, TrustLevel> tempMap = trustNetwork.get(from);
+        if(trustNetwork.containsKey(to)){
+            Map<String, TrustLevel> tempMap = trustNetwork.get(to);
             // if from directly fully trusts to, then return directly.
 
             // Case 1
-            if(tempMap.containsKey(to)){
-                return tempMap.get(to);
+            if(tempMap.containsKey(from)){
+                return tempMap.get(from);
 
                 // Case
             }else{
 
                 double sum = 0;
-                Map<String, TrustLevel> innerMap = trustNetwork.get(from);
+                Map<String, TrustLevel> innerMap = trustNetwork.get(to);
 
                 for (Map.Entry<String, TrustLevel> entry : innerMap.entrySet()) {
                     if(entry.getValue() != TrustLevel.NONE){
                         Set<String> fullyTrustedParties = getFullyTrustedParties(entry.getKey());
-                        if(fullyTrustedParties.contains(to) && entry.getValue()==TrustLevel.FULL){
+                        if(fullyTrustedParties.contains(from) && entry.getValue()==TrustLevel.FULL){
                             sum = 1;
                         }
-                        else if(fullyTrustedParties.contains(to) && entry.getValue()==TrustLevel.PARTIAL) {
+                        else if(fullyTrustedParties.contains(from) && entry.getValue()==TrustLevel.PARTIAL) {
                             sum += 0.5;
                         }
                         if(sum == 1){
@@ -107,7 +120,6 @@ public class Server {
                 }
             }
         }
-
 
         return TrustLevel.NONE;
     }
@@ -131,6 +143,7 @@ public class Server {
     }
 
     public void start(){
+        LOGGER.info("Server is starting.");
         // thread pool
         ExecutorService pool = Executors.newFixedThreadPool(30);
         try (ServerSocket server = new ServerSocket(PORT)) {
@@ -142,12 +155,14 @@ public class Server {
                     pool.submit(task);
                 } catch (IOException ex) {
                     System.err.println(ex);
+                    LOGGER.log(Level.SEVERE, "Error accepting connection", ex);
                 }
             }
 
         } catch (IOException ex) {
             // Exception handling for server-level issues
             System.err.println(ex);
+            LOGGER.log(Level.SEVERE, "Could not listen on port: " + PORT, ex);
         }
     }
 
@@ -162,6 +177,7 @@ public class Server {
         @Override
         public Void call() throws Exception {
             ObjectOutputStream out = null;
+            String name = "";
             try {
 
                 // input stream and output streams for communication with clients.
@@ -169,15 +185,21 @@ public class Server {
                 out = new ObjectOutputStream(connection.getOutputStream());
 
                 // once establish one connection, send a welcome message.
-                String name = (String) in.readObject();
-                System.out.println("Name:" + name);
+                name = (String) in.readObject();
+
+                // log connection activity
+                LOGGER.info("Established connection: User '" + name + "' has connected to the server.");
+
+                // send a welcome message
                 clients.put(name, out);
                 out.writeObject("Message from the server: Welcome " + name + ", you have successfully connected to the server!");
 
                 // forward message
                 while ((name = (String) in.readObject()) != null) {
                     String receiverName = (String) in.readObject();
-                    System.out.println("Receiver name: " + receiverName);
+
+                    // test code
+//                    System.out.println("Receiver name: " + receiverName);
 //                    String message = (String) in.readObject();
 
                     EncryptedMessage encryptedMessage = (EncryptedMessage) in.readObject();
@@ -185,14 +207,22 @@ public class Server {
 //                    EncryptedMessage encryptedMessage = (EncryptedMessage) in readObject();
 
                     String formattedContent = String.format("From: %s\nTrust Level: %s\n",
-                            name, getTrustLevel(name, receiverName)
+                            name, getTrustLevel(receiverName, name)
                     );
 
-                    System.out.println(formattedContent);
+                    // 1. Log sender activity and trust level to identify
+                    // potential spam for accountability
+                    // 2. Only log sender info, not recipient info, to maintain confidentiality.
+                    LOGGER.info("Sender: " + name + " | Trust Level by Recipient" +
+                             ": " + getTrustLevel(receiverName, name));
+
+                    // test code
+                    // System.out.println(formattedContent);
 
                     Message messageToTransfer = new Message(name, formattedContent, encryptedMessage);
 
-                    System.out.println(receiverName + "'s message is received by the server. ");
+                    // test code
+                    // System.out.println(receiverName + "'s message is received by the server. ");
                     if (clients.containsKey(receiverName)) {
                         clients.get(receiverName).writeObject(messageToTransfer);
                     }
@@ -209,6 +239,7 @@ public class Server {
 
                 // the client's PrintWriter is remove once connection is closed.
                 if (out != null) {
+                    LOGGER.info("Disconnected: User '" + name + "' has disconnected from the server.");
                     clients.values().remove(out);
                 }
             }
@@ -216,20 +247,20 @@ public class Server {
         }
     }
 
-    public PublicKey getPublicKey(String filename) throws Exception {
-        String key = new String(Files.readAllBytes(Paths.get(filename)));
-        String publicKeyPEM = key
-                .replace("-----BEGIN PUBLIC KEY-----", "")
-                .replaceAll(System.lineSeparator(), "")
-                .replace("-----END PUBLIC KEY-----", "");
-
-        byte[] encoded = Base64.getDecoder().decode(publicKeyPEM);
-
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encoded);
-        PublicKey publicKey = keyFactory.generatePublic(keySpec);
-        return publicKey;
-    }
+//    public PublicKey getPublicKey(String filename) throws Exception {
+//        String key = new String(Files.readAllBytes(Paths.get(filename)));
+//        String publicKeyPEM = key
+//                .replace("-----BEGIN PUBLIC KEY-----", "")
+//                .replaceAll(System.lineSeparator(), "")
+//                .replace("-----END PUBLIC KEY-----", "");
+//
+//        byte[] encoded = Base64.getDecoder().decode(publicKeyPEM);
+//
+//        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+//        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encoded);
+//        PublicKey publicKey = keyFactory.generatePublic(keySpec);
+//        return publicKey;
+//    }
 
     public static void main(String[] args) {
 
@@ -247,7 +278,6 @@ public class Server {
         server.addTrust("Carmen", "David", TrustLevel.FULL);
         server.addTrust("Jane", "David", TrustLevel.FULL);
         server.addTrust("Jane", "Eve", TrustLevel.FULL);
-
 
         System.out.println("Server starts running...");
         server.start();
