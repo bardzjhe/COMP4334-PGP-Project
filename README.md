@@ -1,17 +1,41 @@
 # COMP4334-PGP-Project
 
-TODO:
+This project is designed to facilitate secure email transmission using PGP encryption. It provides a simple setup for sending encrypted emails between users. The implementation is based on Java and can be run using IntelliJ IDEA.
 
-1. The project used AES, but lecturer only requires DES for symmetric encryption. 
-(We may consider others like CAST-128, 3DES for better security, but not AES) 
+# Getting Started:
+1. Open the project in IntelliJ IDEA.
 
-2. PGP trust model.
+2. Navigate to the src/main/java directory.
 
-3. File processing, can refer to [link](https://github.com/xzx4959/PGP/blob/master/src/main/java/com/alibaba/pgp/TestPGP/KeyBasedLargeFileProcessor.java)
+3. Run the Server.java file to start the server.
 
-Server should deal with message transfer, public key transfer and trust level information transfer. 
+4. Run Alice.java from the src/main/java/Alice directory to launch Alice's user interface.
+
+5. Run Bob.java from the src/main/java/Bob directory to launch Bob's user interface.
+
+# Usage
+-After launching Alice and Bob interfaces, you'll see input boxes.
+
+-In the first input box, enter the receiver's name.
+
+-In the second input box, enter the email text content you want to send.
+
+-Click the "Send" button to initiate the encrypted email transmission.
+
+# Note
+-Ensure that the server is running before attempting to send emails.
+
+-The PGP encryption ensures secure communication between Alice and Bob.
+
+-Make sure to provide valid receiver names and email content for successful transmission.
+
+# Dependencies
+-Java
+
+-PGP Encryption Library (included in the project)
 
 
 
-Initial implementation of the UI:
+
+Implementation of the UI:
 ![img.png](img.png)
